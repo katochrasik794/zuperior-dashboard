@@ -1,525 +1,976 @@
-<!-- b1f408e9-222a-45b7-add2-4f6b2b357ff3 bfd90810-3451-4028-bec3-465927f03272 -->
-# Zuperior Forex CRM - Client-Side Analysis & Planning
+<!-- b1f408e9-222a-45b7-add2-4f6b2b357ff3 64f94d0f-445c-4732-bd67-b12f63aee6fb -->
+# MT5 Manager API Integration Plan
 
-## Executive Summary
+## Overview
 
-**Project**: Zuperior Forex Trading CRM
-**Framework**: Next.js 15.3.2 (App Router) + TypeScript + React 19
-**State Management**: Redux Toolkit + Redux Persist
-**UI Library**: Radix UI + Tailwind CSS + Framer Motion
-**Current State**: Fully functional client-side with API integration to Skale CRM API
-**Backend API**: Will use own bakcned and own makmde apis from aother url only to perform mt5 operations
+**Goal**: Integrate MT5 Manager API for 4 core features with zero errors
 
----
+**API Base URL**: `http://18.130.5.209:5003`
 
-## 1. Directory Structure Analysis
+**Database**: PostgreSQL (replacing MongoDB)
 
-### 1.1 `src/app/` - Application Routes (Next.js App Router)
-
-**Purpose**: Contains all routes, pages, layouts, and API endpoints.
-
-**Structure**:
-```
-app/
-├── (protected)/          # Protected routes requiring authentication
-│   ├── layout.tsx        # Dashboard layout with Sidebar + Navbar
-│   ├── page.tsx          # Dashboard home (/)
-│   ├── deposit/          # Crypto & card deposit flows
-│   ├── withdrawal/       # Crypto withdrawal + internal transfer
-│   ├── transactions/     # Transaction history (deposits/withdrawals)
-│   ├── kyc/              # KYC verification (identity + address)
-│   ├── settings/         # Profile, security, verification
-│   ├── support/          # Support hub + ticket system
-│   ├── partner/          # IB (Introducing Broker) program
-│   ├── trading-platforms/ # MT5 download links
-│   └── trading-tools/    # Trading calculators & analysis tools
-├── api/                  # Next.js API routes (proxy to Skale API)
-├── login/                # Auth page (login/register)
-├── terminal/             # TradingView chart terminal
-└── tools/                # Standalone trading tool pages
-```
-
-**Key Insights**:
-- **Route Groups**: `(protected)` enforces authentication via middleware
-- **Nested Layouts**: Separate layouts for protected routes and login
-- **API Routes**: All 39 API routes act as proxies to external Skale CRM API
+**Strategy**: Implement one API at a time per component, test thoroughly before moving to next
 
 ---
 
-### 1.2 `src/components/` - Reusable UI Components
+## 1. Supported MT5 Groups
 
-**Purpose**: Modular, reusable React components for UI and business logic.
+**Only use these 2 groups**:
 
-**Categories**:
-
-| Category | Components | Purpose |
-|----------|-----------|---------|
-| **Dashboard** | `dashboard-content.tsx`, `accounts-section.tsx`, `balance-section.tsx` | Core dashboard UI |
-| **Deposit/Withdraw** | `DepositDialog.tsx`, `WithdrawPayoutDialog.tsx`, `TransferFundsDialog.tsx` | Multi-step payment flows |
-| **Transactions** | `TransactionTable.tsx`, `TransactionsToolbar.tsx` | Transaction history UI |
-| **Charts** | `market-overview.tsx`, `technical-analysis.tsx`, `crypto-heatmap.tsx` | TradingView widgets |
-| **Sidebar/Navbar** | `sidebar/`, `navbar.tsx` | Navigation components |
-| **UI Primitives** | `ui/` (23 components) | Radix UI wrappers (Button, Dialog, Select, etc.) |
-
-**UI Component Library** (`components/ui/`):
-- Button, Input, Select, Textarea, Label
-- Dialog, Dropdown Menu, Popover, Tooltip
-- Card, Tabs, Toggle, Switch
-- Calendar, Skeleton, Sonner (toast notifications)
-- Custom: `text-animate.tsx`, `floating-dots.tsx`
+1. `real\\Bbook\\Pro\\dynamic-2000x-10P` (Pro Account)
+2. `real\\Bbook\\Standard\\dynamic-2000x-20Pips` (Standard Account)
 
 ---
 
-### 1.3 `src/store/` - Redux State Management
+## 2. MT5 API Endpoints Summary
 
-**Purpose**: Centralized state with Redux Toolkit + Redux Persist.
+### 2.1 Get Groups
 
-**Slices**:
+- **Method**: GET
+- **Endpoint**: `/api/Groups`
+- **Purpose**: Fetch available trading groups
+- **Response**: Array of group configurations
 
-| Slice | File | State Managed |
-|-------|------|---------------|
-| **Auth** | `authSlice.ts` | `token`, `clientId`, login/logout |
-| **User** | `getUserSlice.ts` | User profile data (name, email, phone, etc.) |
-| **Accounts** | `accountsSlice.ts` | MT5 accounts (Live/Demo), balances |
-| **Transactions** | `transactionsSlice.ts` | Deposit/withdrawal history |
-| **KYC** | `kycSlice.ts` | Verification status (document/address) |
-| **Access Token** | `accessCodeSlice.ts` | Temporary access token for API calls |
-| **Register** | `registerSlice.ts` | Registration flow state |
+### 2.2 Open MT5 Account
 
-**Key Features**:
-- **Redux Persist**: Stores auth, user, accounts, transactions, KYC in localStorage
-- **Automatic Token Refresh**: `accessCodeSlice` fetches new tokens before API calls
-- **Logout Reset**: Custom root reducer clears all state on logout
+- **Method**: POST
+- **Endpoint**: `/api/Users` (implied from response)
+- **Purpose**: Create new MT5 trading account
+- **Returns**: Login number, account details
 
----
+### 2.3 Deposit (Add Balance)
 
-### 1.4 `src/context/` - React Context API
+- **Method**: POST
+- **Endpoint**: `/api/Users/{login}/AddClientBalance`
+- **Purpose**: Add funds to MT5 account
+- **Returns**: Updated balance information
 
-**Purpose**: Global state not managed by Redux.
+### 2.4 Withdraw (Deduct Balance)
 
-**Contexts**:
-- **LoadingContext** (`LoadingContext.tsx`): Global loading spinner state
+- **Method**: POST
+- **Endpoint**: `/api/Users/{login}/DeductClientBalance`
+- **Purpose**: Remove funds from MT5 account
+- **Returns**: Updated balance information
 
----
+### 2.5 Get User Profile
 
-### 1.5 `src/hooks/` - Custom React Hooks
-
-| Hook | Purpose |
-|------|---------|
-| `useFetchUserData.ts` | Fetches user data + accounts, auto-refresh every 2 mins |
-| `useSidebarState.ts` | Sidebar collapse/expand state |
-| `useChartToken.ts` | TradingView widget authentication |
+- **Method**: GET
+- **Endpoint**: `/api/Users/{login}/getClientProfile`
+- **Purpose**: Fetch complete account info (balance, equity, leverage, etc.)
+- **Returns**: Full user profile with all trading metrics
 
 ---
 
-### 1.6 `src/services/` - API Service Functions
+## 3. Implementation Roadmap
 
-**Purpose**: Reusable functions for API calls.
+### Phase 1: API Service Layer (Backend)
 
-**Services**:
-- `forgetPassword.ts`, `resetPassword.ts`, `changeTpPassword.ts`
-- `documentVerification.ts`, `addressVerification.ts`, `amlVerification.ts`
-- `kycService.ts`, `depositLimitService.ts`
-- `internalTransfer.ts`, `createTicket.ts`
+Create Next.js API routes that proxy to MT5 Manager API
 
-**Pattern**: Each service calls `/api/*` routes (Next.js API routes), which proxy to Skale API.
+### Phase 2: PostgreSQL Schema
 
----
+Design tables to store MT5 account data
 
-### 1.7 `src/types/` - TypeScript Interfaces
+### Phase 3: Component Integration
 
-**Key Types**:
-
-| File | Types Defined |
-|------|---------------|
-| `user-details.ts` | `User`, `TpAccountSnapshot`, `AccountBillAdsGeneral` |
-| `account-details.ts` | `ApiResponse` (MT5 account data) |
-| `kyc.ts` | `DocumentKYCRequestBody`, `AMLResponse`, `AddressKYCRequestBody` |
-| `cryptocurrency.ts` | (Crypto payment types) |
+Connect frontend components to new API routes one by one
 
 ---
 
-### 1.8 `src/lib/` - Utility Libraries
+## 4. Detailed API Implementation
 
-| File | Purpose |
-|------|---------|
-| `sidebar-config.ts` | Menu items configuration |
-| `sidebar-assets.ts` | Menu icon imports |
-| `utils.ts` | `cn()` utility for class merging |
-| `axios.ts` | Axios instance configuration |
-| `supabase.ts` | Supabase client (if used) |
-| `countries.json` | Country list for registration |
+### 4.1 Get Groups API
 
----
+**File**: `src/app/api/mt5/groups/route.ts`
 
-### 1.9 `src/assets/` - Static Assets
+**Request**:
 
-**Structure**:
-```
-assets/
-├── icons/          # UI icons (PNG/SVG)
-├── sidebar/        # Sidebar menu icons
-├── login/          # Login page images
-├── kyc/            # KYC illustration images
-├── home/           # Landing page images
-└── emails/         # Email template assets
+```typescript
+GET /api/mt5/groups
 ```
 
----
+**MT5 Manager API Call**:
 
-### 1.10 `src/emails/` - Email Templates
+```
+GET http://18.130.5.209:5003/api/Groups
+```
 
-**Purpose**: React Email templates for transactional emails.
+**Response Structure**:
 
-**Templates**:
-- `WelcomeEmail.tsx` - Sent on registration
-- `PasswordChanged.tsx` - Sent on password change
+```typescript
+{
+  Group: "real\\Bbook\\Pro\\dynamic-2000x-10P",
+  Server: 1,
+  Company: "Zuperior FX Limited",
+  Currency: "USD",
+  CurrencyDigits: 2,
+  MarginCall: 100,
+  MarginStopOut: 0,
+  DemoLeverage: 100,
+  // ... other group settings
+}
+```
 
-**Tech**: `@react-email/render` for HTML generation
+**Filter Logic**: Return only the 2 allowed groups
 
----
+- `real\\Bbook\\Pro\\dynamic-2000x-10P`
+- `real\\Bbook\\Standard\\dynamic-2000x-20Pips`
 
-## 2. Page-by-Page Analysis
+**Error Handling**:
 
-### 2.1 Authentication Pages
-
-#### **`/login`** - Login & Registration Page
-
-**File**: `src/app/login/page.tsx`
-
-**Features**:
-- Swiper carousel with login screen images
-- Tabs for Login/Register
-- Two-step registration:
-  1. **Step 1**: Email, password, name, phone, country
-  2. **Step 2**: OTP verification
-- Form validation with `react-hook-form` + `zod`
-
-**Components**:
-- `AuthForm` → `LoginForm` / `RegisterStep1Form` / `RegisterStep2OtpForm`
-- `auth-schemas.ts` - Zod validation schemas
-
-**API Calls**:
-- `POST /api/register` - User registration
-- `POST /api/login` - User login
-- `POST /api/send-otp` - OTP generation
-
-**Data Flow**:
-1. User submits form → API call → Skale API
-2. On success: Redux stores `token` + `clientId` → Redirect to `/`
+- Check if MT5 API is reachable
+- Validate response structure
+- Return user-friendly error messages
 
 ---
 
-### 2.2 Dashboard Home
+### 4.2 Open MT5 Account API
 
-#### **`/`** - Dashboard Overview
+**File**: `src/app/api/mt5/create-account/route.ts`
 
-**File**: `src/app/(protected)/page.tsx`
+**Request Body**:
 
-**Features**:
-- Welcome message with user's name
-- Verification status alert (KYC reminder)
-- Wallet balance display (total across all accounts)
-- Accounts section (Live/Demo tabs)
-- Auto-refresh user data every 2 minutes
+```typescript
+{
+  name: string,              // User's full name
+  group: string,             // One of the 2 allowed groups
+  leverage: number,          // Default: 100
+  masterPassword: string,    // Trading password
+  investorPassword: string,  // Read-only password
+  password: string,          // (Legacy field)
+  email: string,
+  country: string,
+  city: string,
+  phone: string,
+  comment: string
+}
+```
 
-**Components**:
-- `DashboardContent` → `BalanceSection` + `AccountsSection`
-- `VerificationAlert` - Shows KYC status banner
+**MT5 Manager API Call**:
 
-**Data Sources**:
-- `useFetchUserData()` hook → Fetches user + accounts
-- Redux: `state.user.data`, `state.accounts.data`, `state.kyc.verificationStatus`
+```
+POST http://18.130.5.209:5003/api/Users
+Content-Type: application/json
+```
 
-**Future Integrations**:
-- Real-time balance updates via WebSocket
-- Open positions/trades summary
-- Recent transactions widget
+**Response Structure**:
 
----
+```typescript
+{
+  Success: true,
+  Message: "User account created successfully with login 19876893",
+  Data: {
+    Login: 19876893,          // MT5 Account Number (CRITICAL)
+    Name: "rk test",
+    Group: "real\\Bbook\\Standard\\dynamic-2000x-20Pips",
+    Email: "",
+    Country: "string",
+    Phone: "string",
+    Leverage: 100,
+    Balance: 0,
+    Credit: 0,
+    Equity: 0,
+    Margin: 0,
+    MarginFree: 0,
+    MarginLevel: 0,
+    Profit: 0,
+    // ... more fields
+    IsEnabled: true
+  },
+  Error: null
+}
+```
 
-### 2.3 Accounts Management
+**Implementation Steps**:
 
-#### **Accounts Section** (Dashboard Component)
+1. Validate group is one of 2 allowed groups
+2. Hash/encrypt passwords before sending (if needed)
+3. Call MT5 API
+4. If Success:
 
-**File**: `src/components/dashboard/accounts-section.tsx`
+   - Store account data in PostgreSQL `mt5_accounts` table
+   - Link to CRM user via `crm_account_id`
+   - Return Login number to frontend
 
-**Features**:
-- Live/Demo account tabs
-- Account cards with:
-  - Account ID, platform (MT5), leverage
-  - Balance, equity, margin, free margin
-  - Open P&L, closed P&L
-- "Open New Account" dialog (4-step flow)
+5. If Error:
 
-**Account Card Actions**:
-- **Trade Now** → Redirects to `/terminal` or external MT5 platform
-- **Change Leverage** → API call to update leverage
-- **Change Password** → Change MT5 account password
-- **Rename Account** → Update account nickname
-- **Deposit** → Opens deposit dialog
+   - Parse error from MT5 API
+   - Return user-friendly error
 
-**New Account Flow** (`new-account/`):
-1. Choose account type (Standard/ECN/Zero)
-2. Prepare account (loading animation)
-3. Account created (success screen)
+**PostgreSQL Storage**:
 
-**API Calls**:
-- `POST /api/create-account` - Create new MT5 account
-- `POST /api/leverage` - Update leverage
-- `POST /api/password/tp-password` - Change MT5 password
-
----
-
-### 2.4 Deposit Page
-
-#### **`/deposit`** - Deposit Funds
-
-**File**: `src/app/(protected)/deposit/page.tsx`
-
-**Features**:
-- Tab filters: All / Crypto / Bank Transfers
-- Cryptocurrency cards (USDT-TRC20, USDT-ERC20, etc.)
-- Credit/Debit card payment (via ePay gateway)
-
-**Deposit Flow (Crypto)**:
-1. **Step 1**: Select crypto, enter amount, select account
-2. **Step 2**: Confirmation (review details)
-3. **Step 3**: Payment (generate wallet address via Cregis API)
-4. **Step 4**: Status (pending/success)
-
-**Deposit Flow (Credit Card)**:
-1. **Step 1**: Enter card details
-2. **Step 2**: Enter amount + account
-3. **Step 3**: Submit to ePay gateway → Redirect to payment page
-
-**Components**:
-- `DepositDialog` (crypto flow)
-- `CreditCardDialog` (card flow)
-
-**API Calls**:
-- `POST /api/crypto-currency` - Fetch supported crypto tokens
-- `POST /api/cregis/*` - Cregis payment gateway integration
-- `POST /api/epay-deposit` - ePay card payment
-- `POST /api/deposit` - Record deposit in CRM
-
-**Future Integrations**:
-- Bank wire transfer option
-- E-wallets (Skrill, Neteller)
-- Real-time deposit tracking
+```sql
+INSERT INTO mt5_accounts (
+  crm_account_id,
+  mt5_login,
+  name,
+  group_name,
+  leverage,
+  email,
+  country,
+  phone,
+  balance,
+  equity,
+  created_at
+) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+```
 
 ---
 
-### 2.5 Withdrawal Page
+### 4.3 Deposit API
 
-#### **`/withdrawal`** - Withdraw Funds
+**File**: `src/app/api/mt5/deposit/route.ts`
 
-**File**: `src/app/(protected)/withdrawal/page.tsx`
+**Request Body**:
 
-**Features**:
-- Locked if KYC not completed
-- Cryptocurrency withdrawal
-- Internal transfer between accounts
+```typescript
+{
+  login: number,      // MT5 account number
+  balance: number,    // Amount to deposit
+  comment: string     // Transaction note
+}
+```
 
-**Withdrawal Flow**:
-1. **Step 1**: Enter wallet address, amount, select account
-2. **Step 2**: Confirmation
-3. **Step 3**: Submit → Pending approval
+**MT5 Manager API Call**:
 
-**Internal Transfer Flow**:
-1. Select source account
-2. Select destination account
-3. Enter amount → Transfer instantly
+```
+POST http://18.130.5.209:5003/api/Users/{login}/AddClientBalance
+Content-Type: application/json
 
-**Components**:
-- `WithdrawPayoutDialog` - Withdrawal flow
-- `TransferFundsDialog` - Internal transfer
+{
+  "balance": 100,
+  "comment": "Deposit via Cregis - TxID: abc123"
+}
+```
 
-**API Calls**:
-- `POST /api/withdraw` - Submit withdrawal request
-- `POST /api/internal-transfer` - Transfer between accounts
-- `POST /api/payout` - Cregis payout API
+**Response Structure**:
 
-**Pending Withdrawals** (`/withdrawal/pending`):
-- Shows list of pending withdrawal requests
-- Displays status, amount, wallet address
+```typescript
+{
+  Success: true,
+  Message: "Account balance updated successfully",
+  Data: {
+    Login: 19876893,
+    CurrencyDigits: 2,
+    Balance: 100,         // Updated balance
+    Credit: 0,
+    Margin: 0,
+    MarginFree: 100,
+    MarginLevel: 0,
+    MarginLeverage: 100,
+    Profit: 0,
+    Equity: 100,
+    // ... more fields
+  },
+  Error: null
+}
+```
 
----
+**Implementation Steps**:
 
-### 2.6 Transactions Page
+1. Validate login exists in database
+2. Validate balance > 0
+3. Call MT5 API to add balance
+4. If Success:
 
-#### **`/transactions`** - Transaction History
+   - Update balance in PostgreSQL `mt5_accounts` table
+   - Create transaction record in `transactions` table
+   - Return updated balance
 
-**File**: `src/app/(protected)/transactions/page.tsx`
+5. If Error:
 
-**Features**:
-- Tabs: All / Deposits / Withdrawals
-- Account selector dropdown
-- Date range filter
-- Search by transaction ID or account number
-- Transaction table with columns:
-  - Type (Deposit/Withdraw)
-  - Amount, Date/Time
-  - Account ID, Status
+   - Log error
+   - Do NOT update database
+   - Return error to user
 
-**Components**:
-- `TransactionsHeader` - Tab switcher
-- `TransactionsToolbar` - Filters (account, date, search)
-- `TransactionsTable` - Data table with sorting
+**PostgreSQL Storage**:
 
-**Data Flow**:
-1. User selects account → API call → Fetch transactions
-2. Redux: `transactionsSlice` stores data
-3. Table renders filtered/sorted transactions
+```sql
+-- Update account balance
+UPDATE mt5_accounts 
+SET balance = ?, equity = ?, updated_at = NOW()
+WHERE mt5_login = ?;
 
-**API Calls**:
-- `POST /api/transactions` - Fetch transaction history
-
-**Future Enhancements**:
-- Export to CSV/PDF
-- Transaction details modal
-- Bonus/credit transactions
-
----
-
-### 2.7 KYC Verification Pages
-
-#### **`/kyc`** - KYC Hub
-
-**File**: `src/app/(protected)/kyc/page.tsx`
-
-**Features**:
-- Two cards: Identity Proof + Address Proof
-- Lock address proof until identity verified
-- Show checkmark when verified
-
-**Identity Proof Flow** (`/kyc/identity-proof`):
-1. **Personal Info**: First name, last name, DOB
-2. **Document Upload**: Passport/ID/Driver's license
-3. **Verification in Progress**: Shows pending status
-
-**Address Proof Flow** (`/kyc/address-proof`):
-1. **Personal Info**: Address details
-2. **Document Upload**: Utility bill/bank statement
-3. **Verification in Progress**
-
-**Components**:
-- `PersonalInfoStep.tsx` - Form for personal details
-- `DocumentVerificationStep.tsx` - File upload
-- `VerificationInProgressStep.tsx` - Status display
-
-**API Calls**:
-- `POST /api/kyc/document` - Submit identity document (Shufti Pro API)
-- `POST /api/kyc/address` - Submit address document
-- `POST /api/kyc/aml` - AML screening
-
-**Verification Status Updates**:
-- `kycSlice` tracks `isDocumentVerified`, `isAddressVerified`
-- Updates displayed in `VerificationAlert` banner
+-- Record transaction
+INSERT INTO transactions (
+  mt5_login,
+  type,
+  amount,
+  comment,
+  status,
+  created_at
+) VALUES (?, 'deposit', ?, ?, 'completed', NOW());
+```
 
 ---
 
-### 2.8 Settings Page
+### 4.4 Withdraw API
 
-#### **`/settings`** - Profile Settings
+**File**: `src/app/api/mt5/withdraw/route.ts`
 
-**File**: `src/app/(protected)/settings/page.tsx`
+**Request Body**:
 
-**Features**:
-- Tabs: Profile / Verification / Security
-- Query param navigation: `/settings?tab=profile`
+```typescript
+{
+  login: number,      // MT5 account number
+  balance: number,    // Amount to withdraw
+  comment: string     // Transaction note
+}
+```
 
-**Profile Tab**:
-- Display user info (name, email, phone, country)
-- Edit profile (currently read-only in UI)
+**MT5 Manager API Call**:
 
-**Verification Tab**:
-- KYC status overview
-- Remaining deposit limit (based on KYC level)
-- Links to KYC pages
+```
+POST http://18.130.5.209:5003/api/Users/{login}/DeductClientBalance
+Content-Type: application/json
 
-**Security Tab**:
-- Change password
-- Email verification
-- TP (Trading Platform) password change
-- Two-factor authentication (coming soon)
+{
+  "balance": 70,
+  "comment": "Withdrawal to USDT wallet - abc123"
+}
+```
 
-**Components**:
-- `Profile.tsx` - User info display
-- `VerificationProfile.tsx` - KYC status
-- `SecurityTab.tsx` - Password management
+**Response Structure**:
 
-**API Calls**:
-- `POST /api/password/forget` - Request password reset
-- `POST /api/password/reset` - Reset password
-- `POST /api/password/tp-password` - Change MT5 password
+```typescript
+{
+  Success: true,
+  Message: "Account balance deducted successfully",
+  Data: {
+    Login: 19876893,
+    Balance: 30,          // Updated balance (was 100, now 30)
+    Credit: 0,
+    Equity: 30,
+    MarginFree: 30,
+    // ... more fields
+  },
+  Error: null
+}
+```
 
----
+**Implementation Steps**:
 
-### 2.9 Support Hub
+1. Validate login exists
+2. Validate withdrawal amount <= current balance
+3. Call MT5 API to deduct balance
+4. If Success:
 
-#### **`/support`** - Support Center
+   - Update balance in PostgreSQL
+   - Create withdrawal transaction record
+   - Return updated balance
 
-**File**: `src/app/(protected)/support/page.tsx`
+5. If Error:
 
-**Features**:
-- Help center with search (placeholder)
-- Contact options:
-  1. **Open a Ticket** - Submit support ticket
-  2. **Live Chat** - Crisp chat integration
-  3. **Email** - support@zuperior.com
-- My Tickets section (empty state for now)
+   - Log error
+   - Return error (e.g., "Insufficient balance")
 
-**Ticket Creation Flow** (`OpenTicketFlow`):
-1. Select category (Deposit, Withdrawal, Trading, Technical, etc.)
-2. Enter subject + description
-3. Select priority (Low/Normal/High)
-4. Optionally attach account number
-5. Submit → Shows ticket number
+**PostgreSQL Storage**:
 
-**Components**:
-- `OpenTicketFlow.tsx` - Multi-step ticket form
+```sql
+-- Update account balance
+UPDATE mt5_accounts 
+SET balance = ?, equity = ?, updated_at = NOW()
+WHERE mt5_login = ?;
 
-**API Calls**:
-- `POST /api/ticket/create` - Create support ticket
-
-**Live Chat**:
-- **Crisp Chat**: Initialized in `(protected)/layout.tsx`
-- Hidden by default, opens via "Start Chat" button
-
-**Future Enhancements**:
-- Fetch and display user's tickets
-- Ticket detail view with replies
-- File attachments
-
----
-
-### 2.10 Partner Program
-
-#### **`/partner`** - IB Program
-
-**File**: `src/app/(protected)/partner/page.tsx`
-
-**Features**:
-- Introducing Broker (IB) program overview
-- "Apply Now" button → Redirects to external IB portal
-- Revenue share model (up to 40%)
-
-**Future Enhancements**:
-- IB dashboard (referrals, commissions, downline)
-- Referral link generator
-- Commission reports
-- Sub-IB management
-
-**Expected Backend Routes** (to be added):
-- `GET /api/ib/stats` - IB statistics
-- `GET /api/ib/commissions` - Commission history
-- `GET /api/ib/referrals` - Referral list
+-- Record transaction
+INSERT INTO transactions (
+  mt5_login,
+  type,
+  amount,
+  comment,
+  status,
+  created_at
+) VALUES (?, 'withdrawal', ?, ?, 'completed', NOW());
+```
 
 ---
 
-### 2.11 Trading Platforms
+### 4.5 Get User Profile API
 
-#### **`/trading-platforms`** - Platform Downloads
+**File**: `src/app/api/mt5/user-profile/[login]/route.ts`
 
-**File**: `src/app/(protected)/trading-platforms/page
+**Request**:
+
+```typescript
+GET /api/mt5/user-profile/19876893
+```
+
+**MT5 Manager API Call**:
+
+```
+GET http://18.130.5.209:5003/api/Users/{login}/getClientProfile
+```
+
+**Response Structure**:
+
+```typescript
+{
+  Success: true,
+  Message: "User profile retrieved successfully",
+  Data: {
+    Login: 19876893,
+    Name: "rk test",
+    Group: "real\\Bbook\\Standard\\dynamic-2000x-20Pips",
+    Email: "",
+    Country: "string",
+    Phone: "string",
+    Leverage: 100,
+    Balance: 99,         // Current balance
+    Credit: 0,
+    Equity: 99,          // Balance + Profit
+    Margin: 0,           // Used margin
+    MarginFree: 99,      // Free margin
+    MarginLevel: 0,      // Margin level %
+    Profit: 0,           // Open P&L
+    IsEnabled: true
+  },
+  Error: null
+}
+```
+
+**Implementation Steps**:
+
+1. Validate login exists
+2. Call MT5 API to fetch profile
+3. If Success:
+
+   - Update balance/equity in PostgreSQL (sync)
+   - Return full profile data
+
+4. If Error:
+
+   - Return cached data from database (if available)
+
+**Usage**:
+
+- Called on dashboard load
+- Called after deposit/withdrawal
+- Called every 2 minutes for auto-refresh
+
+---
+
+## 5. PostgreSQL Database Schema
+
+### 5.1 Table: `mt5_accounts`
+
+```sql
+CREATE TABLE mt5_accounts (
+  id SERIAL PRIMARY KEY,
+  crm_account_id INTEGER NOT NULL,
+  mt5_login BIGINT UNIQUE NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  group_name VARCHAR(255) NOT NULL,
+  leverage INTEGER DEFAULT 100,
+  email VARCHAR(255),
+  country VARCHAR(100),
+  phone VARCHAR(50),
+  balance DECIMAL(18, 2) DEFAULT 0,
+  credit DECIMAL(18, 2) DEFAULT 0,
+  equity DECIMAL(18, 2) DEFAULT 0,
+  margin DECIMAL(18, 2) DEFAULT 0,
+  margin_free DECIMAL(18, 2) DEFAULT 0,
+  margin_level DECIMAL(10, 2) DEFAULT 0,
+  profit DECIMAL(18, 2) DEFAULT 0,
+  is_enabled BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW(),
+  
+  FOREIGN KEY (crm_account_id) REFERENCES users(id)
+);
+
+CREATE INDEX idx_mt5_login ON mt5_accounts(mt5_login);
+CREATE INDEX idx_crm_account ON mt5_accounts(crm_account_id);
+```
+
+### 5.2 Table: `transactions`
+
+```sql
+CREATE TABLE transactions (
+  id SERIAL PRIMARY KEY,
+  mt5_login BIGINT NOT NULL,
+  type VARCHAR(50) NOT NULL, -- 'deposit', 'withdrawal', 'transfer'
+  amount DECIMAL(18, 2) NOT NULL,
+  comment TEXT,
+  status VARCHAR(50) DEFAULT 'pending', -- 'pending', 'completed', 'failed'
+  payment_method VARCHAR(100), -- 'crypto', 'card', 'bank'
+  transaction_id VARCHAR(255), -- External payment gateway ID
+  created_at TIMESTAMP DEFAULT NOW(),
+  
+  FOREIGN KEY (mt5_login) REFERENCES mt5_accounts(mt5_login)
+);
+
+CREATE INDEX idx_mt5_login_trans ON transactions(mt5_login);
+CREATE INDEX idx_created_at ON transactions(created_at);
+```
+
+### 5.3 Table: `users` (existing CRM users)
+
+```sql
+-- Assume this exists already
+CREATE TABLE users (
+  id SERIAL PRIMARY KEY,
+  email VARCHAR(255) UNIQUE NOT NULL,
+  name VARCHAR(255) NOT NULL,
+  phone VARCHAR(50),
+  country VARCHAR(100),
+  created_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+---
+
+## 6. Frontend Component Updates
+
+### 6.1 New Account Creation
+
+**Component**: `src/components/dashboard/new-account/StepChooseAccountType.tsx`
+
+**Current Flow**:
+
+1. User selects account type (Standard/Pro)
+2. Redirects to Skale API
+
+**New Flow**:
+
+1. User selects account type
+2. Map to MT5 group:
+
+   - Standard → `real\\Bbook\\Standard\\dynamic-2000x-20Pips`
+   - Pro → `real\\Bbook\\Pro\\dynamic-2000x-10P`
+
+3. Call `/api/mt5/create-account` with:
+
+   - name (from Redux)
+   - group (selected)
+   - leverage (default 100)
+   - email, phone, country (from Redux)
+   - Generate passwords (or let user set)
+
+4. On success:
+
+   - Store `mt5_login` in Redux
+   - Show success screen with login number
+   - Refresh account list
+
+**API Call**:
+
+```typescript
+const response = await axios.post('/api/mt5/create-account', {
+  name: user.name,
+  group: groupName,
+  leverage: 100,
+  masterPassword: generatedPassword,
+  investorPassword: generatedInvestorPassword,
+  email: user.email,
+  country: user.country,
+  city: user.city,
+  phone: user.phone,
+  comment: 'Created from CRM'
+});
+
+if (response.data.Success) {
+  const mt5Login = response.data.Data.Login;
+  // Store in Redux
+  // Show success
+}
+```
+
+---
+
+### 6.2 Deposit Flow
+
+**Component**: `src/components/deposit/Step3Payment.tsx`
+
+**Current Flow**:
+
+1. User generates crypto address
+2. Sends crypto
+3. Webhook confirms payment
+4. Calls Skale API to add balance
+
+**New Flow**:
+
+1. User generates crypto address (Cregis API)
+2. Sends crypto
+3. Webhook confirms payment
+4. **Call `/api/mt5/deposit`** with:
+
+   - login (MT5 account number)
+   - balance (deposit amount)
+   - comment (transaction ID from Cregis)
+
+5. On success:
+
+   - Update balance in Redux
+   - Show success message
+
+**API Call**:
+
+```typescript
+const response = await axios.post('/api/mt5/deposit', {
+  login: selectedAccount.mt5_login,
+  balance: depositAmount,
+  comment: `Deposit via ${cryptoName} - TxID: ${txId}`
+});
+
+if (response.data.Success) {
+  // Update Redux balance
+  dispatch(updateAccountBalance({
+    login: selectedAccount.mt5_login,
+    balance: response.data.Data.Balance,
+    equity: response.data.Data.Equity
+  }));
+}
+```
+
+---
+
+### 6.3 Withdrawal Flow
+
+**Component**: `src/components/withdraw/Step3PayoutProps.tsx`
+
+**Current Flow**:
+
+1. User enters wallet address + amount
+2. Calls Skale API to request withdrawal
+3. Pending approval
+
+**New Flow**:
+
+1. User enters wallet address + amount
+2. **Validate balance** via `/api/mt5/user-profile/{login}`
+3. **Call `/api/mt5/withdraw`** with:
+
+   - login (MT5 account number)
+   - balance (withdrawal amount)
+   - comment (wallet address + crypto)
+
+4. On success:
+
+   - Create payout request in Cregis/payment gateway
+   - Update balance in Redux
+   - Show pending status
+
+**API Call**:
+
+```typescript
+// First check balance
+const profileResponse = await axios.get(`/api/mt5/user-profile/${mt5Login}`);
+const currentBalance = profileResponse.data.Data.Balance;
+
+if (currentBalance < withdrawalAmount) {
+  toast.error('Insufficient balance');
+  return;
+}
+
+// Deduct from MT5
+const response = await axios.post('/api/mt5/withdraw', {
+  login: mt5Login,
+  balance: withdrawalAmount,
+  comment: `Withdrawal to ${walletAddress} - ${cryptoName}`
+});
+
+if (response.data.Success) {
+  // Create payout in payment gateway
+  // Update Redux
+}
+```
+
+---
+
+### 6.4 Dashboard Balance Display
+
+**Component**: `src/components/dashboard/dashboard-content.tsx`
+
+**Current Flow**:
+
+- Fetches user data from Skale API
+- Stores in Redux
+- Displays total balance
+
+**New Flow**:
+
+- Fetch MT5 accounts from PostgreSQL via `/api/mt5/user-accounts`
+- For each account, optionally call `/api/mt5/user-profile/{login}` for live data
+- Calculate total balance
+- Display with auto-refresh every 2 minutes
+
+**API Call**:
+
+```typescript
+// Fetch all MT5 accounts for this user
+const response = await axios.get('/api/mt5/user-accounts', {
+  params: { crmAccountId: user.crm_account_id }
+});
+
+const accounts = response.data.accounts;
+
+// Optionally fetch live data for each
+for (const account of accounts) {
+  const liveData = await axios.get(`/api/mt5/user-profile/${account.mt5_login}`);
+  // Update account with live balance
+}
+
+// Calculate total
+const totalBalance = accounts.reduce((sum, acc) => sum + acc.balance, 0);
+```
+
+---
+
+## 7. API Route File Structure
+
+```
+src/app/api/mt5/
+├── groups/
+│   └── route.ts              (GET - Fetch MT5 groups)
+├── create-account/
+│   └── route.ts              (POST - Create MT5 account)
+├── deposit/
+│   └── route.ts              (POST - Add balance)
+├── withdraw/
+│   └── route.ts              (POST - Deduct balance)
+├── user-profile/
+│   └── [login]/
+│       └── route.ts          (GET - Fetch user profile)
+└── user-accounts/
+    └── route.ts              (GET - Fetch all accounts for CRM user)
+```
+
+---
+
+## 8. Error Handling Strategy
+
+### 8.1 MT5 API Errors
+
+**Common Errors**:
+
+- Connection timeout
+- Invalid login number
+- Insufficient balance
+- Group not found
+- Duplicate account
+
+**Handling**:
+
+```typescript
+try {
+  const response = await axios.post(MT5_API_URL, data);
+  
+  if (!response.data.Success) {
+    throw new Error(response.data.Error || response.data.Message);
+  }
+  
+  return response.data;
+} catch (error) {
+  if (axios.isAxiosError(error)) {
+    // Network error
+    return { success: false, error: 'MT5 API unreachable' };
+  }
+  
+  // API returned error
+  return { success: false, error: error.message };
+}
+```
+
+---
+
+## 9. Testing Checklist
+
+### 9.1 API Testing (Use Postman/curl)
+
+**Test 1: Get Groups**
+
+```bash
+curl http://localhost:3000/api/mt5/groups
+```
+
+✅ Should return 2 groups only
+
+**Test 2: Create Account**
+
+```bash
+curl -X POST http://localhost:3000/api/mt5/create-account \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Test User",
+    "group": "real\\Bbook\\Standard\\dynamic-2000x-20Pips",
+    "leverage": 100,
+    "masterPassword": "Test@123",
+    "investorPassword": "Test@000",
+    "email": "test@example.com",
+    "country": "India",
+    "city": "Mumbai",
+    "phone": "+911234567890",
+    "comment": "Test account"
+  }'
+```
+
+✅ Should return Login number
+
+✅ Should store in PostgreSQL
+
+**Test 3: Deposit**
+
+```bash
+curl -X POST http://localhost:3000/api/mt5/deposit \
+  -H "Content-Type: application/json" \
+  -d '{
+    "login": 19876893,
+    "balance": 100,
+    "comment": "Test deposit"
+  }'
+```
+
+✅ Should update balance
+
+✅ Should create transaction record
+
+**Test 4: Withdraw**
+
+```bash
+curl -X POST http://localhost:3000/api/mt5/withdraw \
+  -H "Content-Type: application/json" \
+  -d '{
+    "login": 19876893,
+    "balance": 50,
+    "comment": "Test withdrawal"
+  }'
+```
+
+✅ Should deduct balance
+
+✅ Should fail if insufficient balance
+
+**Test 5: Get Profile**
+
+```bash
+curl http://localhost:3000/api/mt5/user-profile/19876893
+```
+
+✅ Should return full profile with updated balance
+
+---
+
+## 10. Implementation Order (Zero Errors Strategy)
+
+### Step 1: Setup PostgreSQL
+
+1. Create database
+2. Create tables (`mt5_accounts`, `transactions`)
+3. Test connections
+
+### Step 2: Implement Groups API
+
+1. Create `/api/mt5/groups/route.ts`
+2. Test with Postman
+3. Fix any errors before moving forward
+
+### Step 3: Implement Create Account API
+
+1. Create `/api/mt5/create-account/route.ts`
+2. Add PostgreSQL insert logic
+3. Test end-to-end (API → MT5 → Database)
+4. Fix errors
+
+### Step 4: Implement User Profile API
+
+1. Create `/api/mt5/user-profile/[login]/route.ts`
+2. Test fetching existing account
+3. Add database sync logic
+
+### Step 5: Implement Deposit API
+
+1. Create `/api/mt5/deposit/route.ts`
+2. Add balance validation
+3. Add transaction logging
+4. Test with dummy data
+
+### Step 6: Implement Withdraw API
+
+1. Create `/api/mt5/withdraw/route.ts`
+2. Add balance check logic
+3. Test insufficient balance scenario
+4. Add transaction logging
+
+### Step 7: Update Frontend Components
+
+1. Update `NewAccountDialog` to use new API
+2. Test account creation
+3. Update `DepositDialog` to use new API
+4. Test deposit flow
+5. Update `WithdrawDialog` to use new API
+6. Test withdrawal flow
+7. Update Dashboard to use new APIs
+8. Test balance display
+
+### Step 8: Integration Testing
+
+1. End-to-end flow: Create account → Deposit → Withdraw
+2. Test error scenarios
+3. Test edge cases (zero balance, invalid login, etc.)
+
+---
+
+## 11. Environment Variables
+
+**Add to `.env.local`**:
+
+```
+MT5_API_BASE_URL=http://18.130.5.209:5003
+POSTGRES_HOST=localhost
+POSTGRES_PORT=5432
+POSTGRES_DB=zuperior_crm
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=your_password
+```
+
+---
+
+## 12. Security Considerations
+
+1. **API Key/Auth**: Add authentication to MT5 API calls (if required)
+2. **Rate Limiting**: Limit deposit/withdraw requests per user
+3. **Balance Validation**: Always validate balance before withdrawal
+4. **SQL Injection**: Use parameterized queries
+5. **Password Storage**: Never log or expose MT5 passwords
+
+---
+
+## Summary
+
+This plan focuses on **4 core MT5 features** with a **zero-error implementation strategy**:
+
+1. ✅ Open Live Account
+2. ✅ Deposit
+3. ✅ Withdrawal  
+4. ✅ Groups
+
+**Key Principles**:
+
+- Implement ONE API at a time
+- Test thoroughly before moving to next
+- Store all data in PostgreSQL
+- Direct MT5 Manager API integration (no Skale proxy)
+- Simple, focused implementation
+
+**Next Steps**:
+
+1. Setup PostgreSQL database
+2. Implement API routes one by one
+3. Test each route independently
+4. Update frontend components
+5. End-to-end testing
+
+### To-dos
+
+- [ ] Setup PostgreSQL database and create tables (mt5_accounts, transactions, users)
+- [ ] Implement /api/mt5/groups route and test with Postman
+- [ ] Implement /api/mt5/create-account route with PostgreSQL insert logic
+- [ ] Implement /api/mt5/user-profile/[login] route for fetching account details
+- [ ] Implement /api/mt5/deposit route with balance update and transaction logging
+- [ ] Implement /api/mt5/withdraw route with balance validation and transaction logging
+- [ ] Update NewAccountDialog component to use new MT5 API
+- [ ] Update DepositDialog component to use new MT5 deposit API
+- [ ] Update WithdrawDialog component to use new MT5 withdraw API
+- [ ] Update Dashboard to fetch and display MT5 account balances from new APIs
+- [ ] End-to-end testing: Create account → Deposit → Withdraw → Balance check
