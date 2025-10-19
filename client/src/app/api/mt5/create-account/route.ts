@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const response = await fetch(`${API_URL}/mt5/create-account`, {
+    const response = await fetch(`${API_URL}/mt5/users`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,

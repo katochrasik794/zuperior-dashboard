@@ -12,6 +12,7 @@ import { Label } from "../../ui/label";
 import { Input } from "../../ui/input";
 import { Button } from "../../ui/button";
 import EyeIcon from "../../EyeIcon";
+import { mt5Service } from "@/services/api.service";
 
 interface StepPrepareAccountProps {
   accountType: string;
@@ -176,6 +177,12 @@ export const StepPrepareAccount: React.FC<StepPrepareAccountProps> = ({
         <Button
           className="flex-1 cursor-pointer bg-gradient-to-r from-[#6242a5] to-[#9f8bcf] text-white hover:bg-[#9d6ad9] flex items-center justify-center"
           onClick={async () => {
+            console.log('🚀 Creating MT5 Account with data:', {
+              accountName,
+              accountType,
+              leverage,
+              password: password.substring(0, 3) + '***' // Hide password in logs
+            });
             await handleSubmit();
           }}
           disabled={loadingStep2}

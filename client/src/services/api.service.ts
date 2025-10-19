@@ -1,5 +1,3 @@
-// zuperior-dashboard/client/src/services/api.service.ts
-
 import axios from 'axios';
 
 // Get the backend URL from environment variables
@@ -24,32 +22,28 @@ api.interceptors.request.use((config) => {
   return Promise.reject(error);
 });
 
-
 // --- Authentication Service Functions ---
 const authService = {
-
   // 1. User Login
   login: async (credentials: any) => {
     const response = await api.post('/login', credentials);
-    // The backend should return { token, clientId, user }
     return response.data;
   },
 
   // 2. User Registration (Signup)
   register: async (userData: any) => {
     const response = await api.post('/register', userData);
-    // The backend should return { token, clientId, user }
     return response.data;
   },
 
-  // 3. Helper to store credentials in local storage
+  // 3. Store credentials
   setAuthData: (token: string, clientId: string) => {
     localStorage.setItem('userToken', token);
     localStorage.setItem('clientId', clientId);
     console.log('Auth data stored:', { token: token.substring(0, 20) + '...', clientId });
   },
 
-  // 4. Helper to clear session data (Logout)
+  // 4. Clear session data
   clearAuthData: () => {
     localStorage.removeItem('userToken');
     localStorage.removeItem('clientId');
@@ -57,28 +51,27 @@ const authService = {
     console.log('Auth data cleared');
   },
 
-  // 7. Logout function
-  logout: () => {
-    authService.clearAuthData();
-    // Redirect to login page
-    if (typeof window !== 'undefined') {
-      window.location.href = '/login';
-    }
-  },
-
-  // 5. Helper to check if user is authenticated
+  // 5. Check authentication
   isAuthenticated: () => {
     const token = localStorage.getItem('userToken');
     const clientId = localStorage.getItem('clientId');
     return !!(token && clientId);
   },
 
-  // 6. Helper to get stored auth data
+  // 6. Get stored auth data
   getAuthData: () => {
     return {
       token: localStorage.getItem('userToken'),
       clientId: localStorage.getItem('clientId')
     };
+  },
+
+  // 7. Logout
+  logout: () => {
+    authService.clearAuthData();
+    if (typeof window !== 'undefined') {
+      window.location.href = '/login';
+    }
   }
 };
 
@@ -103,7 +96,7 @@ const mt5Service = {
     phone?: string;
     comment?: string;
   }) => {
-    const response = await api.post('/mt5/create-account', accountData);
+    const response = await api.post('/Users', accountData);
     return response.data;
   },
 
@@ -113,7 +106,7 @@ const mt5Service = {
     balance: number;
     comment?: string;
   }) => {
-    const response = await api.post('/mt5/deposit', data);
+    const response = await api.post(`/Users/${data.login}/AddClientBalance`, data);
     return response.data;
   },
 
@@ -123,19 +116,13 @@ const mt5Service = {
     balance: number;
     comment?: string;
   }) => {
-    const response = await api.post('/mt5/withdraw', data);
+    const response = await api.post(`/Users/${data.login}/DeductClientBalance`, data);
     return response.data;
   },
 
   // Get MT5 user profile
   getMt5UserProfile: async (login: number) => {
-    const response = await api.get(`/mt5/user-profile/${login}`);
-    return response.data;
-  },
-
-  // Get all MT5 accounts for current user
-  getUserMt5Accounts: async () => {
-    const response = await api.get('/mt5/user-accounts');
+    const response = await api.get(`/Users/${login}/getClientProfile`);
     return response.data;
   }
 };

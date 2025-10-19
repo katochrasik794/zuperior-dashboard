@@ -25,7 +25,6 @@
 ## 2. MT5 API Endpoints Summary
 
 ### 2.1 Get Groups
-
 - **Method**: GET
 - **Endpoint**: `/api/Groups`
 - **Purpose**: Fetch available trading groups

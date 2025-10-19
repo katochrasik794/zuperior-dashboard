@@ -233,7 +233,7 @@ export const getUserAccounts = async (req, res) => {
                 accounts: accounts.map(account => ({
                     id: account.id,
                     accountId: account.accountId,
-                    name: account.name,
+                    name: `MT5-${account.accountId}`, // Generate name from account ID
                     group: account.groupName,
                     leverage: account.leverage,
                     balance: account.balance,
@@ -417,11 +417,11 @@ export const getUserProfile = async (req, res) => {
             message: 'User profile retrieved successfully',
             data: {
                 login: parseInt(login),
-                name: updatedAccount.name,
+                name: `MT5-${login}`, // Generate name from login ID
                 group: updatedAccount.groupName,
-                email: updatedAccount.email,
-                country: updatedAccount.country,
-                phone: updatedAccount.phone,
+                email: updatedAccount.email || '',
+                country: updatedAccount.country || '',
+                phone: updatedAccount.phone || '',
                 leverage: updatedAccount.leverage,
                 balance: updatedAccount.balance,
                 credit: updatedAccount.credit,

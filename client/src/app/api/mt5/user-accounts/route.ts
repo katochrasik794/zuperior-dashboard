@@ -1,4 +1,4 @@
-// client/src/app/api/mt5/user-accounts/route.ts
+// client/src/app/api/mt5/users route.ts
 import { NextRequest, NextResponse } from 'next/server';
 
 const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:5000/api';
@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const response = await fetch(`${API_URL}/mt5/user-accounts`, {
+    const response = await fetch(`${API_URL}/users`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,

@@ -43,28 +43,34 @@ export interface MT5State {
 
 // Async thunks
 export const fetchMt5Groups = createAsyncThunk(
-  'mt5/fetchGroups',
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await mt5Service.getMt5Groups();
-      return response.data;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to fetch MT5 groups');
-    }
-  }
+   'mt5/fetchGroups',
+   async (_, { rejectWithValue }) => {
+     try {
+       const response = await mt5Service.getMt5Groups();
+       return response.data;
+     } catch (error: any) {
+       return rejectWithValue(error.response?.data?.message || 'Failed to fetch MT5 groups');
+     }
+   }
 );
 
 export const fetchUserMt5Accounts = createAsyncThunk(
-  'mt5/fetchUserAccounts',
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await mt5Service.getUserMt5Accounts();
-      return response.data.accounts;
-    } catch (error: any) {
-      return rejectWithValue(error.response?.data?.message || 'Failed to fetch MT5 accounts');
-    }
-  }
+   'mt5/fetchUserAccounts',
+   async (_, { rejectWithValue }) => {
+     try {
+       const response = await mt5Service.getUserMt5Accounts();
+       return response.data.accounts;
+     } catch (error: any) {
+       // Handle authentication errors gracefully
+       if (error.response?.status === 401) {
+         console.log('User not authenticated, returning empty accounts');
+         return [];
+       }
+       return rejectWithValue(error.response?.data?.message || 'Failed to fetch MT5 accounts');
+     }
+   }
 );
+
 
 export const createMt5Account = createAsyncThunk(
   'mt5/createAccount',
@@ -84,6 +90,10 @@ export const createMt5Account = createAsyncThunk(
       const response = await mt5Service.createMt5Account(accountData);
       return response.data;
     } catch (error: any) {
+      // Handle authentication errors gracefully
+      if (error.response?.status === 401) {
+        return rejectWithValue('Authentication required. Please log in first.');
+      }
       return rejectWithValue(error.response?.data?.message || 'Failed to create MT5 account');
     }
   }
@@ -96,6 +106,10 @@ export const depositToMt5Account = createAsyncThunk(
       const response = await mt5Service.depositToMt5(data);
       return response.data;
     } catch (error: any) {
+      // Handle authentication errors gracefully
+      if (error.response?.status === 401) {
+        return rejectWithValue('Authentication required. Please log in first.');
+      }
       return rejectWithValue(error.response?.data?.message || 'Failed to deposit to MT5 account');
     }
   }
@@ -108,6 +122,10 @@ export const withdrawFromMt5Account = createAsyncThunk(
       const response = await mt5Service.withdrawFromMt5(data);
       return response.data;
     } catch (error: any) {
+      // Handle authentication errors gracefully
+      if (error.response?.status === 401) {
+        return rejectWithValue('Authentication required. Please log in first.');
+      }
       return rejectWithValue(error.response?.data?.message || 'Failed to withdraw from MT5 account');
     }
   }
@@ -120,6 +138,10 @@ export const refreshMt5AccountProfile = createAsyncThunk(
       const response = await mt5Service.getMt5UserProfile(login);
       return response.data;
     } catch (error: any) {
+      // Handle authentication errors gracefully
+      if (error.response?.status === 401) {
+        return rejectWithValue('Authentication required. Please log in first.');
+      }
       return rejectWithValue(error.response?.data?.message || 'Failed to refresh MT5 profile');
     }
   }
@@ -186,6 +208,7 @@ const mt5AccountSlice = createSlice({
         state.isLoading = false;
         state.error = action.payload as string;
       })
+
 
       // Create account
       .addCase(createMt5Account.pending, (state) => {

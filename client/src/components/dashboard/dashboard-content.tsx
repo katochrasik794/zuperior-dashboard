@@ -27,7 +27,7 @@ export function DashboardContent() {
   const [newAccountDialogOpen, setNewAccountDialogOpen] = useState(false);
   const verificationStatus = "unverified" as const; // Default status since we're not using Redux
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const { fetchAllData, balance: totalBalance, isLoading, hasData } = useFetchUserData();
+  const { fetchAllData, balance: totalBalance, isLoading, hasData, isAuthenticated } = useFetchUserData();
 
   //auto refetch every 2 mins
   useEffect(() => {
@@ -58,6 +58,22 @@ export function DashboardContent() {
   // Show skeleton when loading
   if (isLoading && !hasData) {
     return <DashboardSkeleton />;
+  }
+
+  // Show login prompt if not authenticated
+  if (!isAuthenticated) {
+    return (
+      <div className="space-y-[25px]">
+        <TextAnimate className="text-2xl font-bold text-black/85 dark:text-white/85 tracking-tighter px-2 md:px-0">
+          Welcome to Zuperior CRM
+        </TextAnimate>
+        <div className="bg-yellow-100 dark:bg-yellow-900/20 border border-yellow-300 dark:border-yellow-700 rounded-lg p-4 mx-2 md:mx-0">
+          <p className="text-yellow-800 dark:text-yellow-200">
+            Please log in to access your MT5 trading accounts and dashboard features.
+          </p>
+        </div>
+      </div>
+    );
   }
 
   return (

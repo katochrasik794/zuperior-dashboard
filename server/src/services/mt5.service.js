@@ -14,6 +14,8 @@ const MT5_BASE_URL = 'http://18.130.5.209:5003/api';
 const mt5Request = async (method, endpoint, data = null) => {
     try {
         const url = `${MT5_BASE_URL}/${endpoint}`;
+        console.log(`🔄 MT5 API Call: ${method} ${url}`);
+        console.log('📤 Request Data:', data);
 
         const response = await axios({
             method: method.toLowerCase(),
@@ -26,14 +28,22 @@ const mt5Request = async (method, endpoint, data = null) => {
             }
         });
 
-        // The MT5 API returns data wrapped in { Success, Message, Data, Error }
-        if (response.data && response.data.Success === true) {
+        console.log('📥 Raw MT5 API Response:', response.data);
+
+        // The MT5 API returns data directly as an array for Groups endpoint
+        if (Array.isArray(response.data)) {
+            console.log('✅ MT5 API Success: Groups data received');
+            return response.data; // Return the array directly for Groups
+        } else if (response.data && response.data.Success === true) {
+            console.log('✅ MT5 API Success:', response.data.Data);
             return response.data.Data; // Return the 'Data' field on success
         } else if (response.data && response.data.Error !== null) {
             // Handle specific MT5 error messages
+            console.error('❌ MT5 API Error:', response.data);
             throw new Error(`MT5 API Error: ${response.data.Message || JSON.stringify(response.data.Error)}`);
         } else {
             // Handle unexpected response structure
+            console.error('⚠️ Unexpected MT5 API Response:', response.data);
             throw new Error('MT5 API returned a non-successful or invalid response.');
         }
 
@@ -43,6 +53,7 @@ const mt5Request = async (method, endpoint, data = null) => {
             ? `MT5 HTTP Error ${error.response.status}: ${error.response.statusText}`
             : error.message;
 
+        console.error('🚨 MT5 API Network Error:', errorMessage);
         throw new Error(`Failed to communicate with MT5 Manager: ${errorMessage}`);
     }
 };
@@ -51,7 +62,7 @@ const mt5Request = async (method, endpoint, data = null) => {
 
 // 4.1 Get Groups API
 export const getMt5Groups = () => {
-    return mt5Request('GET', 'groups');
+    return mt5Request('GET', 'Groups');
 };
 
 // 4.2 Open MT5 Account API
