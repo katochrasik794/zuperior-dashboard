@@ -177,12 +177,13 @@ export const StepPrepareAccount: React.FC<StepPrepareAccountProps> = ({
         <Button
           className="flex-1 cursor-pointer bg-gradient-to-r from-[#6242a5] to-[#9f8bcf] text-white hover:bg-[#9d6ad9] flex items-center justify-center"
           onClick={async () => {
-            console.log('🚀 Creating MT5 Account with data:', {
+            console.log('📋 Form data collected (for reference only):', {
               accountName,
               accountType,
               leverage,
               password: password.substring(0, 3) + '***' // Hide password in logs
             });
+            console.log('⚠️ NOTE: This is form data, not the API payload. Check "🚀 Creating MT5 Account - Final API payload:" for actual API data.');
             await handleSubmit();
           }}
           disabled={loadingStep2}

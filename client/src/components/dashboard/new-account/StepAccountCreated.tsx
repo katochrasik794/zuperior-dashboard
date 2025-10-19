@@ -10,10 +10,31 @@ import copy from "@/assets/copy.svg";
 
 interface StepAccountCreatedProps {
   latestAccount: {
-    data?: {
-      mt5Login?: number;
-      accountId?: string;
+    status?: string;
+    status_code?: string;
+    message?: string;
+    _token?: string;
+    object?: {
+      crm_account_id?: number;
+      crm_tp_account_id?: number;
+      tp_id?: string;
+      tp_creation_error?: string;
     };
+    // Real MT5 account data
+    accountId?: string;
+    name?: string;
+    group?: string;
+    leverage?: number;
+    balance?: number;
+    equity?: number;
+    credit?: number;
+    margin?: number;
+    marginFree?: number;
+    marginLevel?: number;
+    profit?: number;
+    isEnabled?: boolean;
+    createdAt?: string;
+    updatedAt?: string;
   } | null;
   password: string;
   onOpenChange: (open: boolean) => void;
@@ -48,16 +69,52 @@ export const StepAccountCreated: React.FC<StepAccountCreatedProps> = ({
               MT5 Login:
             </span>
             <span className="text-[14px] font-semibold text-black dark:text-white/74 w-[140px]">
-              {latestAccount?.data?.mt5Login || "N/A"}
+              {latestAccount?.object?.tp_id || latestAccount?.object?.crm_account_id || "N/A"}
             </span>
             <Image className="h-4 w-4 cursor-pointer" src={copy} alt="" />
           </div>
-          <div className="flex items-center justify-between md:mb-4">
+          <div className="flex items-center justify-between">
             <span className="text-[14px] font-semibold text-black dark:text-[#8e8c8f]">
               Password:
             </span>
             <span className="text-[14px] font-semibold text-black dark:text-white/75 w-[150px]">
               {password || "N/A"}
+            </span>
+            <Image className="h-4 w-4 cursor-pointer" src={copy} alt="" />
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-[14px] font-semibold text-black dark:text-[#8e8c8f]">
+              Account Type:
+            </span>
+            <span className="text-[14px] font-semibold text-black dark:text-white/74 w-[140px]">
+              Live
+            </span>
+            <Image className="h-4 w-4 cursor-pointer" src={copy} alt="" />
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-[14px] font-semibold text-black dark:text-[#8e8c8f]">
+              Leverage:
+            </span>
+            <span className="text-[14px] font-semibold text-black dark:text-white/75 w-[140px]">
+              1:{latestAccount?.leverage || "N/A"}
+            </span>
+            <Image className="h-4 w-4 cursor-pointer" src={copy} alt="" />
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-[14px] font-semibold text-black dark:text-[#8e8c8f]">
+              Balance:
+            </span>
+            <span className="text-[14px] font-semibold text-black dark:text-white/74 w-[140px]">
+              ${latestAccount?.balance || "0.00"}
+            </span>
+            <Image className="h-4 w-4 cursor-pointer" src={copy} alt="" />
+          </div>
+          <div className="flex justify-between items-center md:mb-4">
+            <span className="text-[14px] font-semibold text-black dark:text-[#8e8c8f]">
+              Account Group:
+            </span>
+            <span className="text-[14px] font-semibold text-black dark:text-white/75 w-[140px]">
+              {latestAccount?.group?.replace(/real\\|demo\\/g, '') || "N/A"}
             </span>
             <Image className="h-4 w-4 cursor-pointer" src={copy} alt="" />
           </div>

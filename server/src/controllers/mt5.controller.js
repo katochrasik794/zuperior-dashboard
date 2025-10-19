@@ -87,37 +87,28 @@ export const createAccount = async (req, res) => {
         const mt5Data = mt5Response.Data;
         const mt5Login = mt5Data.Login;
 
-        // Store account in database
+        // Store account in database (simplified schema)
+        console.log('🔄 Storing MT5 account in database...');
+        console.log('📊 MT5 Login ID:', mt5Login);
+        console.log('👤 User ID:', userId);
+
         const newAccount = await prisma.MT5Account.create({
             data: {
                 accountId: mt5Login.toString(),
-                leverage: parseInt(leverage),
-                balance: parseFloat(mt5Data.Balance || 0),
-                equity: parseFloat(mt5Data.Equity || 0),
-                credit: parseFloat(mt5Data.Credit || 0),
-                margin: parseFloat(mt5Data.Margin || 0),
-                marginFree: parseFloat(mt5Data.MarginFree || 0),
-                marginLevel: parseFloat(mt5Data.MarginLevel || 0),
-                profit: parseFloat(mt5Data.Profit || 0),
-                groupName: mt5Data.Group,
-                isEnabled: mt5Data.IsEnabled,
-                userId: userId,
-                name: name,
-                email: email || '',
-                country: country || '',
-                phone: phone || ''
+                userId: userId
             }
         });
+
+        console.log('✅ MT5 account stored successfully in database');
+        console.log('🆔 Database record ID:', newAccount.id);
+        console.log('💾 Stored accountId:', newAccount.accountId);
 
         res.json({
             success: true,
             message: 'MT5 account created successfully',
             data: {
                 mt5Login: mt5Login,
-                accountId: newAccount.id,
-                balance: newAccount.balance,
-                equity: newAccount.equity,
-                group: newAccount.groupName
+                accountId: newAccount.id
             }
         });
 
@@ -173,16 +164,16 @@ export const deposit = async (req, res) => {
 
         const mt5Data = mt5Response.Data;
 
-        // Update account balance in database
+        // Update account status in database
+        console.log('🔄 Updating MT5 account in database after deposit...');
         const updatedAccount = await prisma.MT5Account.update({
             where: { id: account.id },
             data: {
-                balance: parseFloat(mt5Data.Balance),
-                equity: parseFloat(mt5Data.Equity),
-                marginFree: parseFloat(mt5Data.MarginFree),
+                status: mt5Data.IsEnabled,
                 updatedAt: new Date()
             }
         });
+        console.log('✅ MT5 account updated successfully after deposit');
 
         // Create transaction record
         await prisma.MT5Transaction.create({
@@ -202,8 +193,7 @@ export const deposit = async (req, res) => {
             data: {
                 login: login,
                 amount: balance,
-                newBalance: updatedAccount.balance,
-                newEquity: updatedAccount.equity
+                status: updatedAccount.status
             }
         });
 
@@ -226,6 +216,18 @@ export const getUserAccounts = async (req, res) => {
             orderBy: { createdAt: 'desc' }
         });
 
+        console.log('🔍 Fetching user MT5 accounts from database...');
+        console.log('👤 User ID:', userId);
+        console.log('📊 Number of accounts found:', accounts.length);
+
+        accounts.forEach((account, index) => {
+            console.log(`📋 Account ${index + 1}:`, {
+                id: account.id,
+                accountId: account.accountId,
+                createdAt: account.createdAt
+            });
+        });
+
         res.json({
             success: true,
             message: 'User accounts retrieved successfully',
@@ -233,19 +235,7 @@ export const getUserAccounts = async (req, res) => {
                 accounts: accounts.map(account => ({
                     id: account.id,
                     accountId: account.accountId,
-                    name: `MT5-${account.accountId}`, // Generate name from account ID
-                    group: account.groupName,
-                    leverage: account.leverage,
-                    balance: account.balance,
-                    equity: account.equity,
-                    credit: account.credit,
-                    margin: account.margin,
-                    marginFree: account.marginFree,
-                    marginLevel: account.marginLevel,
-                    profit: account.profit,
-                    isEnabled: account.isEnabled,
-                    createdAt: account.createdAt,
-                    updatedAt: account.updatedAt
+                    createdAt: account.createdAt
                 }))
             }
         });
@@ -310,16 +300,16 @@ export const withdraw = async (req, res) => {
 
         const mt5Data = mt5Response.Data;
 
-        // Update account balance in database
+        // Update account status in database
+        console.log('🔄 Updating MT5 account in database after withdrawal...');
         const updatedAccount = await prisma.MT5Account.update({
             where: { id: account.id },
             data: {
-                balance: parseFloat(mt5Data.Balance),
-                equity: parseFloat(mt5Data.Equity),
-                marginFree: parseFloat(mt5Data.MarginFree),
+                status: mt5Data.IsEnabled,
                 updatedAt: new Date()
             }
         });
+        console.log('✅ MT5 account updated successfully after withdrawal');
 
         // Create transaction record
         await prisma.MT5Transaction.create({
@@ -339,8 +329,7 @@ export const withdraw = async (req, res) => {
             data: {
                 login: login,
                 amount: balance,
-                newBalance: updatedAccount.balance,
-                newEquity: updatedAccount.equity
+                status: updatedAccount.status
             }
         });
 
@@ -396,41 +385,26 @@ export const getUserProfile = async (req, res) => {
 
         const mt5Data = mt5Response.Data;
 
-        // Update account data in database with fresh MT5 data
+        // Update account status in database with fresh MT5 data
+        console.log('🔄 Updating MT5 account in database with fresh profile data...');
         const updatedAccount = await prisma.MT5Account.update({
             where: { id: account.id },
             data: {
-                balance: parseFloat(mt5Data.Balance),
-                equity: parseFloat(mt5Data.Equity),
-                credit: parseFloat(mt5Data.Credit || 0),
-                margin: parseFloat(mt5Data.Margin || 0),
-                marginFree: parseFloat(mt5Data.MarginFree || 0),
-                marginLevel: parseFloat(mt5Data.MarginLevel || 0),
-                profit: parseFloat(mt5Data.Profit || 0),
-                isEnabled: mt5Data.IsEnabled,
+                status: mt5Data.IsEnabled,
                 updatedAt: new Date()
             }
         });
+        console.log('✅ MT5 account updated successfully with fresh profile data');
 
         res.json({
             success: true,
             message: 'User profile retrieved successfully',
             data: {
                 login: parseInt(login),
-                name: `MT5-${login}`, // Generate name from login ID
-                group: updatedAccount.groupName,
-                email: updatedAccount.email || '',
-                country: updatedAccount.country || '',
-                phone: updatedAccount.phone || '',
+                accountId: account.accountId,
+                platform: updatedAccount.platform,
                 leverage: updatedAccount.leverage,
-                balance: updatedAccount.balance,
-                credit: updatedAccount.credit,
-                equity: updatedAccount.equity,
-                margin: updatedAccount.margin,
-                marginFree: updatedAccount.marginFree,
-                marginLevel: updatedAccount.marginLevel,
-                profit: updatedAccount.profit,
-                isEnabled: updatedAccount.isEnabled,
+                status: updatedAccount.status,
                 createdAt: updatedAccount.createdAt,
                 updatedAt: updatedAccount.updatedAt
             }
@@ -438,6 +412,99 @@ export const getUserProfile = async (req, res) => {
 
     } catch (error) {
         console.error('Error fetching MT5 user profile:', error);
+        res.status(500).json({
+            success: false,
+            message: error.message || 'Internal server error'
+        });
+    }
+};
+
+// 4.6 POST /api/mt5/store-account
+export const storeAccount = async (req, res) => {
+    try {
+        const { accountId, userName, userEmail } = req.body;
+
+        console.log('🔄 SERVER: Storing MT5 account in database...');
+        console.log('📊 Account ID:', accountId);
+        console.log('👤 User Name:', userName);
+        console.log('📧 User Email:', userEmail);
+
+        // Validate required fields
+        if (!accountId) {
+            return res.status(400).json({
+                success: false,
+                message: 'Account ID is required'
+            });
+        }
+
+        if (!userName || !userEmail) {
+            return res.status(400).json({
+                success: false,
+                message: 'User name and email are required'
+            });
+        }
+
+        // Find user by name and email
+        const user = await prisma.user.findFirst({
+            where: {
+                name: userName,
+                email: userEmail
+            }
+        });
+
+        if (!user) {
+            console.log('❌ User not found with name:', userName, 'and email:', userEmail);
+            return res.status(404).json({
+                success: false,
+                message: 'User not found'
+            });
+        }
+
+        console.log('✅ Found user:', user.name, 'with ID:', user.id);
+
+        // Check if account already exists
+        const existingAccount = await prisma.MT5Account.findFirst({
+            where: {
+                accountId: accountId.toString(),
+                userId: user.id
+            }
+        });
+
+        if (existingAccount) {
+            console.log('⚠️ MT5 account already exists in database');
+            return res.json({
+                success: true,
+                message: 'MT5 account already exists in database',
+                data: {
+                    accountId: existingAccount.accountId,
+                    id: existingAccount.id
+                }
+            });
+        }
+
+        // Store account in database with only basic fields
+        const newAccount = await prisma.MT5Account.create({
+            data: {
+                accountId: accountId.toString(),
+                userId: user.id
+            }
+        });
+
+        console.log('✅ SERVER: MT5 account stored successfully in database');
+        console.log('🆔 Database record ID:', newAccount.id);
+        console.log('💾 Stored accountId:', newAccount.accountId);
+
+        res.json({
+            success: true,
+            message: 'MT5 account stored in database successfully',
+            data: {
+                accountId: newAccount.accountId,
+                id: newAccount.id
+            }
+        });
+
+    } catch (error) {
+        console.error('❌ SERVER: Error storing MT5 account in database:', error);
         res.status(500).json({
             success: false,
             message: error.message || 'Internal server error'

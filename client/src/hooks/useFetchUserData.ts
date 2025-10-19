@@ -20,11 +20,9 @@ export function useFetchUserData() {
        console.log("🔄 Fetching MT5 user accounts...");
        await dispatch(fetchUserMt5Accounts()).unwrap();
        console.log("✅ MT5 accounts fetched successfully");
-     } catch (err) {
-      console.error("❌ MT5 Data fetch failed:", err);
+     } catch (err: any) {
       // Don't throw error for authentication issues
       if (err === "Not authorized to access this route") {
-        console.log("User needs to authenticate first");
         return;
       }
       throw err;

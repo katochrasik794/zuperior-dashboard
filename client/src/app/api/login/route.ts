@@ -2,28 +2,29 @@ import { NextRequest, NextResponse } from "next/server";
 import axios from "axios";
 
 export async function POST(req: NextRequest) {
-  const bodyText = await req.text();
-  const params = new URLSearchParams(bodyText);
-
-  const request = params.get("request");
-  const email = params.get("email");
-  const password = params.get("password");
-  const access_token = params.get("access_token");
-
-  if (!request || !email || !password || !access_token) {
-    return NextResponse.json(
-      { message: "Missing required fields." },
-      { status: 400 }
-    );
-  }
-
   try {
+    // Parse JSON data
+    const body = await req.json();
+    const { email, password } = body;
+
+    if (!email || !password) {
+      return NextResponse.json(
+        { message: "Email and password are required." },
+        { status: 400 }
+      );
+    }
+
+    // Call local server authentication
+    const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:5000';
     const response = await axios.post(
-      "https://client.api.skaleapps.io/api/v-2/",
-      bodyText,
+      `${baseUrl}/login`,
+      {
+        email,
+        password,
+      },
       {
         headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
+          "Content-Type": "application/json",
         },
       }
     );
@@ -32,18 +33,18 @@ export async function POST(req: NextRequest) {
   } catch (error: unknown) {
     if (axios.isAxiosError(error)) {
       console.error(
-        "Skale API AxiosError:",
+        "Server API AxiosError:",
         error.response?.data || error.message
       );
       return NextResponse.json(
         {
-          message: "Failed to call Skale API",
+          message: error.response?.data?.message || "Login failed",
           error: error.response?.data || error.message,
         },
         { status: error.response?.status || 500 }
       );
     } else if (error instanceof Error) {
-      console.error("Skale API Error:", error.message);
+      console.error("Server API Error:", error.message);
       return NextResponse.json(
         {
           message: "Unexpected error occurred",
@@ -52,7 +53,7 @@ export async function POST(req: NextRequest) {
         { status: 500 }
       );
     } else {
-      console.error("Unknown error during Skale API call");
+      console.error("Unknown error during server API call");
       return NextResponse.json(
         {
           message: "Unknown error occurred",

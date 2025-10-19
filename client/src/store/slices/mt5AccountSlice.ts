@@ -7,19 +7,21 @@ import { mt5Service } from "@/services/api.service";
 // --------------------
 export interface MT5Account {
   accountId: string;
-  name: string;
-  group: string;
-  leverage: number;
-  balance: number;
-  equity: number;
-  credit: number;
-  margin: number;
-  marginFree: number;
-  marginLevel: number;
-  profit: number;
-  isEnabled: boolean;
   createdAt?: string;
-  updatedAt?: string;
+  // Additional fields from API response (not stored in DB)
+  name?: string;
+  group?: string;
+  balance?: number;
+  equity?: number;
+  credit?: number;
+  margin?: number;
+  marginFree?: number;
+  marginLevel?: number;
+  profit?: number;
+  leverage?: number;
+  isEnabled?: boolean;
+  platform?: string;
+  status?: boolean;
 }
 
 export interface MT5Group {
@@ -52,14 +54,18 @@ export const fetchMt5Groups = createAsyncThunk(
    async (_, { rejectWithValue }) => {
      try {
        const response = await mt5Service.getMt5Groups();
-       return response.data;
+       // Handle .NET Core API response format
+       if (response.data?.Success === false) {
+         return rejectWithValue(response.data?.Message || "Failed to fetch MT5 groups");
+       }
+       return response.data?.Data || response.data || [];
      } catch (error: any) {
        return rejectWithValue(
-         error.response?.data?.message || "Failed to fetch MT5 groups"
+         error.response?.data?.Message || error.response?.data?.message || "Failed to fetch MT5 groups"
        );
      }
    }
-);
+ );
 
 // ✅ Get User MT5 Accounts
 export const fetchUserMt5Accounts = createAsyncThunk(
@@ -67,18 +73,49 @@ export const fetchUserMt5Accounts = createAsyncThunk(
    async (_, { rejectWithValue }) => {
      try {
        const response = await mt5Service.getUserMt5Accounts();
-       return response.data.accounts || [];
+       // Handle .NET Core API response format
+       if (response.data?.Success === false) {
+         if (response.data?.Message?.includes("Not authorized") || response.status === 401) {
+           console.log("User not authenticated, returning empty accounts");
+           return [];
+         }
+         return rejectWithValue(response.data?.Message || "Failed to fetch MT5 accounts");
+       }
+
+       const accounts = response.data?.Data || response.data || [];
+       // Transform .NET Core user format to match expected MT5Account format
+       const transformedAccounts = accounts.map((account: any) => ({
+         accountId: String(account.Login),
+         name: account.Name,
+         group: account.Group,
+         leverage: account.Leverage,
+         balance: account.Balance,
+         equity: account.Equity,
+         credit: account.Credit,
+         margin: account.Margin,
+         marginFree: account.MarginFree,
+         marginLevel: account.MarginLevel,
+         profit: account.Profit,
+         isEnabled: account.IsEnabled,
+         createdAt: account.Registration,
+         updatedAt: account.LastAccess
+       }));
+       return transformedAccounts;
      } catch (error: any) {
        if (error.response?.status === 401) {
-         console.log("User not authenticated, returning empty accounts");
          return [];
        }
+
+       if (error.code === 'NETWORK_ERROR' || error.message === 'Network Error') {
+         return rejectWithValue("Network error - please check your connection");
+       }
+
        return rejectWithValue(
-         error.response?.data?.message || "Failed to fetch MT5 accounts"
+         error.response?.data?.Message || error.response?.data?.message || error.message || "Failed to fetch MT5 accounts"
        );
      }
    }
-);
+ );
 
 // ✅ Create MT5 Account
 export const createMt5Account = createAsyncThunk(
@@ -99,13 +136,74 @@ export const createMt5Account = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
+      console.log("🔄 Redux slice - Calling MT5 service with data:", data);
       const response = await mt5Service.createMt5Account(data);
-      return response.data;
+      console.log("✅ Redux slice - MT5 service response:", response);
+      console.log("📊 Redux slice - Response data:", response.data);
+      console.log("📊 Redux slice - Response data type:", typeof response.data);
+
+      // Handle different response formats
+      if (!response.data) {
+        console.error("❌ No response data received");
+        return rejectWithValue("No response data received from MT5 API");
+      }
+
+      // Handle .NET Core API response format
+      if (response.data?.Success === false) {
+        console.error("❌ API returned error:", response.data.Message);
+        return rejectWithValue(response.data?.Message || "Failed to create MT5 account");
+      }
+
+      // Try different response structures
+      let accountData = null;
+
+      if (response.data?.Data) {
+        accountData = response.data.Data;
+        console.log("📊 Using response.data.Data:", accountData);
+      } else if (response.data?.Login) {
+        accountData = response.data;
+        console.log("📊 Using response.data directly:", accountData);
+      } else if (Array.isArray(response.data) && response.data.length > 0) {
+        accountData = response.data[0];
+        console.log("📊 Using first array element:", accountData);
+      } else {
+        console.error("❌ Unexpected response structure:", response.data);
+        return rejectWithValue("Unexpected response structure from MT5 API");
+      }
+
+      if (!accountData || accountData.Login === 0 || accountData.Login === undefined) {
+        console.error("❌ Account creation failed - Login is 0 or undefined:", accountData);
+        return rejectWithValue("MT5 account creation failed - account was not actually created");
+      }
+
+      console.log("📊 Redux slice - Account data with Login:", accountData);
+
+      // Transform .NET Core user format to match expected MT5Account format
+      const transformedAccount = {
+        accountId: String(accountData.Login),
+        name: accountData.Name || data.name,
+        group: accountData.Group || data.group,
+        leverage: accountData.Leverage || data.leverage,
+        balance: accountData.Balance || 0,
+        equity: accountData.Equity || 0,
+        credit: accountData.Credit || 0,
+        margin: accountData.Margin || 0,
+        marginFree: accountData.MarginFree || 0,
+        marginLevel: accountData.MarginLevel || 0,
+        profit: accountData.Profit || 0,
+        isEnabled: accountData.IsEnabled !== undefined ? accountData.IsEnabled : true,
+        createdAt: accountData.Registration || new Date().toISOString(),
+        updatedAt: accountData.LastAccess || new Date().toISOString()
+      };
+
+      console.log("🔄 Redux slice - Transformed account:", transformedAccount);
+      return transformedAccount;
     } catch (error: any) {
+      console.error("❌ Redux slice - Error:", error);
       if (error.response?.status === 401)
         return rejectWithValue("Authentication required. Please log in first.");
       return rejectWithValue(
-        error.response?.data?.message || "Failed to create MT5 account"
+        error.response?.data?.Message || error.response?.data?.message || error.message || "Failed to create MT5 account"
       );
     }
   }
@@ -120,12 +218,16 @@ export const depositToMt5Account = createAsyncThunk(
   ) => {
     try {
       const response = await mt5Service.depositToMt5(data);
+      // Handle .NET Core API response format
+      if (response.data?.Success === false) {
+        return rejectWithValue(response.data?.Message || "Failed to deposit funds");
+      }
       return response.data;
     } catch (error: any) {
       if (error.response?.status === 401)
         return rejectWithValue("Authentication required. Please log in first.");
       return rejectWithValue(
-        error.response?.data?.message || "Failed to deposit funds"
+        error.response?.data?.Message || error.response?.data?.message || "Failed to deposit funds"
       );
     }
   }
@@ -140,12 +242,16 @@ export const withdrawFromMt5Account = createAsyncThunk(
   ) => {
     try {
       const response = await mt5Service.withdrawFromMt5(data);
+      // Handle .NET Core API response format
+      if (response.data?.Success === false) {
+        return rejectWithValue(response.data?.Message || "Failed to withdraw funds");
+      }
       return response.data;
     } catch (error: any) {
       if (error.response?.status === 401)
         return rejectWithValue("Authentication required. Please log in first.");
       return rejectWithValue(
-        error.response?.data?.message || "Failed to withdraw funds"
+        error.response?.data?.Message || error.response?.data?.message || "Failed to withdraw funds"
       );
     }
   }
@@ -157,12 +263,34 @@ export const refreshMt5AccountProfile = createAsyncThunk(
   async (login: number, { rejectWithValue }) => {
     try {
       const response = await mt5Service.getMt5UserProfile(login);
-      return response.data;
+      // Handle .NET Core API response format
+      if (response.data?.Success === false) {
+        return rejectWithValue(response.data?.Message || "Failed to refresh MT5 profile");
+      }
+
+      const profileData = response.data?.Data || response.data;
+      // Transform .NET Core user format to match expected MT5Account format
+      return {
+        accountId: String(profileData.Login),
+        name: profileData.Name,
+        group: profileData.Group,
+        leverage: profileData.Leverage,
+        balance: profileData.Balance,
+        equity: profileData.Equity,
+        credit: profileData.Credit,
+        margin: profileData.Margin,
+        marginFree: profileData.MarginFree,
+        marginLevel: profileData.MarginLevel,
+        profit: profileData.Profit,
+        isEnabled: profileData.IsEnabled,
+        createdAt: profileData.Registration,
+        updatedAt: profileData.LastAccess
+      };
     } catch (error: any) {
       if (error.response?.status === 401)
         return rejectWithValue("Authentication required. Please log in first.");
       return rejectWithValue(
-        error.response?.data?.message || "Failed to refresh MT5 profile"
+        error.response?.data?.Message || error.response?.data?.message || "Failed to refresh MT5 profile"
       );
     }
   }
@@ -203,8 +331,9 @@ const mt5AccountSlice = createSlice({
       if (account) {
         account.balance = action.payload.balance;
         account.equity = action.payload.equity;
+        // Calculate total balance from accounts that have balance
         state.totalBalance = state.accounts.reduce(
-          (sum, acc) => sum + acc.balance,
+          (sum, acc) => sum + (acc.balance || 0),
           0
         );
       }
@@ -252,17 +381,10 @@ const mt5AccountSlice = createSlice({
       })
       .addCase(depositToMt5Account.fulfilled, (state, action) => {
         state.isLoading = false;
-        const { login, newBalance, newEquity } = action.payload?.data || {};
-        const account = state.accounts.find(
-          (acc) => acc.accountId === String(login)
-        );
-        if (account) {
-          account.balance = newBalance;
-          account.equity = newEquity;
-          state.totalBalance = state.accounts.reduce(
-            (sum, acc) => sum + acc.balance,
-            0
-          );
+        // For .NET Core API, deposit success means we should refresh account data
+        if (action.payload?.Success) {
+          console.log("Deposit successful - account data should be refreshed");
+          // The account will be refreshed when the user data is refetched
         }
       })
       .addCase(depositToMt5Account.rejected, (state, action) => {
@@ -277,17 +399,10 @@ const mt5AccountSlice = createSlice({
       })
       .addCase(withdrawFromMt5Account.fulfilled, (state, action) => {
         state.isLoading = false;
-        const { login, newBalance, newEquity } = action.payload?.data || {};
-        const account = state.accounts.find(
-          (acc) => acc.accountId === String(login)
-        );
-        if (account) {
-          account.balance = newBalance;
-          account.equity = newEquity;
-          state.totalBalance = state.accounts.reduce(
-            (sum, acc) => sum + acc.balance,
-            0
-          );
+        // For .NET Core API, withdraw success means we should refresh account data
+        if (action.payload?.Success) {
+          console.log("Withdrawal successful - account data should be refreshed");
+          // The account will be refreshed when the user data is refetched
         }
       })
       .addCase(withdrawFromMt5Account.rejected, (state, action) => {
@@ -297,15 +412,16 @@ const mt5AccountSlice = createSlice({
 
       // Refresh Profile
       .addCase(refreshMt5AccountProfile.fulfilled, (state, action) => {
-        const data = action.payload?.data;
-        if (!data) return;
+        const accountData = action.payload;
+        if (!accountData) return;
         const account = state.accounts.find(
-          (acc) => acc.accountId === String(data.login)
+          (acc) => acc.accountId === accountData.accountId
         );
         if (account) {
-          Object.assign(account, data);
+          Object.assign(account, accountData);
+          // Calculate total balance from accounts that have balance
           state.totalBalance = state.accounts.reduce(
-            (sum, acc) => sum + acc.balance,
+            (sum, acc) => sum + (acc.balance || 0),
             0
           );
         }

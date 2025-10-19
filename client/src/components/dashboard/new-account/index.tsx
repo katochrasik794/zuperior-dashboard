@@ -1,15 +1,12 @@
 "use client";
 
 import type React from "react";
-
 import { useEffect, useRef, useState } from "react";
 import {
   Dialog,
   DialogContent,
   DialogHeader,
 } from "../../ui/dialog";
-import { useSelector } from "react-redux";
-import { RootState } from "@/store";
 import { useAppDispatch } from "@/store/hooks";
 import { createMt5Account, fetchMt5Groups } from "@/store/slices/mt5AccountSlice";
 import { toast } from "sonner";
@@ -29,6 +26,21 @@ interface NewAccountResponse {
     tp_id: string;
     tp_creation_error: string;
   };
+  // Add real MT5 account data
+  accountId?: string;
+  name?: string;
+  group?: string;
+  leverage?: number;
+  balance?: number;
+  equity?: number;
+  credit?: number;
+  margin?: number;
+  marginFree?: number;
+  marginLevel?: number;
+  profit?: number;
+  isEnabled?: boolean;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export function NewAccountDialog({
@@ -56,9 +68,7 @@ export function NewAccountDialog({
   const [isDragging, setIsDragging] = useState(false);
   const [startX, setStartX] = useState(0);
   const [scrollLeftValue, setScrollLeftValue] = useState(0);
-  const crmAccountId = useSelector(
-    (state: RootState) => state.user.data?.crm_account_id
-  );
+  // CRM account ID is not required for MT5 account creation
 
   const [latestAccount, setLatestAccount] = useState<NewAccountResponse | null>(
     null
@@ -180,47 +190,181 @@ export function NewAccountDialog({
     try {
       setLoadingStep2(true);
 
-      if (!crmAccountId) {
-        console.error("crm_account_id is undefined or empty");
-        return;
-      }
-
       // Map account plan to MT5 group
       let group = "";
-      if (accountPlan === "Standard") {
+      if (accountPlan === "standard") {
         group = "real\\Bbook\\Standard\\dynamic-2000x-20Pips";
-      } else if (accountPlan === "Pro") {
+      } else if (accountPlan === "pro") {
         group = "real\\Bbook\\Pro\\dynamic-2000x-10P";
       } else {
+        console.error("❌ Invalid account plan selected:", accountPlan);
         toast.error("Please select a valid account plan");
         return;
       }
 
+      console.log("✅ Account plan selected:", accountPlan, "→ Group:", group);
+
       // Generate passwords for MT5 (master and investor)
       const masterPassword = password.trim();
-      const investorPassword = password.trim() + "inv"; // Simple investor password generation
+      const investorPassword = masterPassword + "inv"; // Auto-generate investor password
 
       const payload = {
         name: accountName.trim(),
         group: group,
-        leverage: parseInt(leverage.trim()) || 100,
+        leverage: parseInt(leverage) || 100,
         masterPassword: masterPassword,
         investorPassword: investorPassword,
-        email: "", // Can be added later if needed
-        country: "", // Can be added later if needed
-        city: "", // Can be added later if needed
-        phone: "", // Can be added later if needed
+        password: masterPassword, // Legacy field as per API spec
+        email: "",
+        country: "",
+        city: "",
+        phone: "",
         comment: `Created from CRM - ${accountPlan} account`
       };
 
+      console.log("🚀 Creating MT5 Account - Final API payload:", JSON.stringify(payload, null, 2));
+
       const result = await dispatch(createMt5Account(payload)).unwrap();
 
-      if (result.success) {
-        toast.success("Your MT5 account has been created successfully!");
-        await fetchAllData(); // Refresh the accounts list
+      // Handle .NET Core API response format
+      if (result) {
+        console.log("✅ MT5 Account creation response:", result);
+
+        // Check if account was actually created (accountId should not be empty)
+        if (!result.accountId || result.accountId === "0") {
+          console.error("❌ MT5 account creation failed - accountId is empty");
+          toast.error("MT5 account creation failed - please check API configuration");
+          return;
+        }
+
+        toast.success(`Your MT5 account has been created successfully! Account ID: ${result.accountId}`);
+
+        // Set the latest account data for the success step
+        setLatestAccount({
+          status: "success",
+          status_code: "200",
+          message: "Account created successfully",
+          _token: "",
+          object: {
+            crm_account_id: parseInt(result.accountId) || 0,
+            crm_tp_account_id: 0,
+            tp_id: result.accountId,
+            tp_creation_error: ""
+          },
+          // Add real MT5 account data
+          accountId: result.accountId,
+          name: result.name,
+          group: result.group,
+          leverage: result.leverage,
+          balance: result.balance,
+          equity: result.equity,
+          credit: result.credit,
+          margin: result.margin,
+          marginFree: result.marginFree,
+          marginLevel: result.marginLevel,
+          profit: result.profit,
+          isEnabled: result.isEnabled,
+          createdAt: result.createdAt,
+          updatedAt: result.updatedAt
+        });
+
+        // Fetch fresh account details from the API using proxy
+        console.log("🔄 Fetching fresh account details from API...");
+        try {
+          const profileResponse = await fetch(`/api/proxy/users/${result.accountId}/getClientProfile`);
+          const profileData = await profileResponse.json();
+          console.log("✅ Fresh account profile:", profileData);
+
+          // Update the latest account with fresh data
+          if (profileData.data) {
+            setLatestAccount(prev => ({
+              ...prev!,
+              accountId: profileData.data.accountId || prev?.accountId,
+              name: profileData.data.name || prev?.name,
+              group: profileData.data.group || prev?.group,
+              leverage: profileData.data.leverage || prev?.leverage,
+              balance: profileData.data.balance || prev?.balance,
+              equity: profileData.data.equity || prev?.equity,
+              credit: profileData.data.credit || prev?.credit,
+              margin: profileData.data.margin || prev?.margin,
+              marginFree: profileData.data.marginFree || prev?.marginFree,
+              marginLevel: profileData.data.marginLevel || prev?.marginLevel,
+              profit: profileData.data.profit || prev?.profit,
+              isEnabled: profileData.data.isEnabled || prev?.isEnabled,
+              createdAt: profileData.data.createdAt || prev?.createdAt,
+              updatedAt: profileData.data.updatedAt || prev?.updatedAt
+            }));
+          }
+        } catch (profileError) {
+          console.log("⚠️ Could not fetch fresh profile:", profileError);
+        }
+
+        console.log("🎉 MT5 Account Created Successfully!");
+        console.log("📊 Account Details:", {
+          accountId: result.accountId,
+          name: result.name,
+          group: result.group,
+          leverage: result.leverage,
+          balance: result.balance,
+          isEnabled: result.isEnabled
+        });
+
+        // Store MT5 account in database (basic fields only)
+        console.log("💾 Storing MT5 account in database...");
+        try {
+          // Get user data from localStorage
+          const userData = localStorage.getItem('user');
+          const token = localStorage.getItem('userToken');
+
+          if (token && userData) {
+            const user = JSON.parse(userData);
+            console.log("👤 User data from localStorage:", user);
+
+            // Use name and email to lookup user in database
+            const userName = user.name;
+            const userEmail = user.email;
+
+            console.log("👤 User Name:", userName);
+            console.log("📧 User Email:", userEmail);
+
+            if (!userName || !userEmail) {
+              console.error("❌ User name or email not found in user data. Available fields:", Object.keys(user));
+              console.error("❌ Full user data:", user);
+              return;
+            }
+
+            const storeResponse = await fetch('/api/mt5/store-account', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                accountId: result.accountId,
+                userName: userName,
+                userEmail: userEmail
+              })
+            });
+
+            if (storeResponse.ok) {
+              const storeData = await storeResponse.json();
+              console.log("✅ MT5 account stored in database:", storeData);
+            } else {
+              const errorData = await storeResponse.json().catch(() => ({}));
+              console.error("❌ Failed to store MT5 account in database:", storeResponse.statusText, errorData);
+            }
+          } else {
+            console.warn("⚠️ No user token or user data found, skipping database storage");
+            console.log("🔍 Debug - userData:", userData);
+            console.log("🔍 Debug - token:", token);
+          }
+        } catch (storeError) {
+          console.error("❌ Error storing MT5 account in database:", storeError);
+        }
+
+        await fetchAllData();
         nextStep();
       } else {
-        toast.error(result.message || "Failed to create MT5 account");
+        toast.error("Failed to create MT5 account");
       }
 
     } catch (err: any) {

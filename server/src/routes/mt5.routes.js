@@ -23,4 +23,7 @@ router.post('/Users/:login/DeductClientBalance', protect, mt5Controller.withdraw
 // 2.5 Get User Profile API
 router.get('/Users/:login/getClientProfile', protect, mt5Controller.getUserProfile);
 
+// 2.6 Store MT5 Account in Database (No auth required - userId passed directly)
+router.post('/mt5/store-account', mt5Controller.storeAccount);
+
 export default router;

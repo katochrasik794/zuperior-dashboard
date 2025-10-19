@@ -72,6 +72,38 @@ export async function POST(request: NextRequest) {
 
     const data = await response.json();
 
+    // After MT5 account is created, store account details in database
+    console.log('🔄 Storing MT5 account details in database...');
+    console.log('📊 MT5 Account Data:', data);
+
+    if (data.data?.mt5Login) {
+      try {
+        const accountId = data.data.mt5Login.toString();
+        console.log('💾 Storing accountId:', accountId);
+
+        // Call internal API to store in database
+        const storeResponse = await fetch(`${API_URL}/api/mt5/store-account`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            accountId: accountId,
+            mt5Data: data
+          })
+        });
+
+        if (storeResponse.ok) {
+          console.log('✅ MT5 account details stored successfully in database');
+        } else {
+          console.error('❌ Failed to store MT5 account details in database');
+        }
+      } catch (storeError) {
+        console.error('❌ Error storing MT5 account in database:', storeError);
+      }
+    }
+
     return NextResponse.json(data);
 
   } catch (error) {
