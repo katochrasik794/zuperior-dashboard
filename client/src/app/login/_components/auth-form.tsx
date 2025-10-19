@@ -1,8 +1,10 @@
-"use client";
+// zuperior-dashboard/client/src/app/login/_components/auth-form.tsx (New File)
 
+"use client";
 import { useState, FormEvent } from "react";
 import { useAppDispatch, useAppSelector } from "@/store/hooks";
 import { loginUser } from "@/store/slices/authSlice";
+import { authService } from "@/services/api.service";
 import { registerUser } from "@/store/slices/registerSlice";
 import { fetchAccessToken } from "@/store/slices/accessCodeSlice";
 import { useRouter } from "next/navigation";
@@ -13,7 +15,6 @@ import { toast } from "sonner";
 import { useLoading } from "@/context/LoadingContext";
 import AuthToggleTabs from "./AuthToggleTabs";
 import RegisterStep1Form from "./RegisterStep1Form";
-// import RegisterStep2OtpForm from "./RegisterStep2OtpForm";
 import LoginForm from "./LoginForm";
 import SubmitButton from "./SubmitButton";
 import { forgetPassword } from "@/services/forgetPassword";
