@@ -1,9 +1,10 @@
 // zuperior-dashboard/server/src/routes/mt5.routes.js
 
-const express = require('express');
+import express from 'express';
+import * as mt5Controller from '../controllers/mt5.controller.js';
+import { protect } from '../middleware/auth.middleware.js';
+
 const router = express.Router();
-const mt5Controller = require('../controllers/mt5.controller');
-const { protect } = require('../middleware/auth.middleware'); // Assuming MT5 routes need protection
 
 // --- Public MT5 Routes ---
 // 4.1 Get Groups API - Used during the account creation flow
@@ -24,5 +25,7 @@ router.post('/mt5/withdraw', protect, mt5Controller.withdraw);
 // 4.5 Get User Profile (Protected - Fetching user-specific data)
 router.get('/mt5/user-profile/:login', protect, mt5Controller.getUserProfile);
 
+// Get all MT5 accounts for a user (Protected)
+router.get('/mt5/user-accounts', protect, mt5Controller.getUserAccounts);
 
-module.exports = router;
+export default router;

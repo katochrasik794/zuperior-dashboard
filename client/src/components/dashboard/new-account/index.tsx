@@ -10,10 +10,8 @@ import {
 } from "../../ui/dialog";
 import { useSelector } from "react-redux";
 import { RootState } from "@/store";
-import { fetchAccessToken } from "@/store/slices/accessCodeSlice";
 import { useAppDispatch } from "@/store/hooks";
-import { createAdditionalLiveAccount } from "@/store/slices/liveAccountSlice";
-import { createAdditionalDemoAccount } from "@/store/slices/demoAccountSlice";
+import { createMt5Account, fetchMt5Groups } from "@/store/slices/mt5AccountSlice";
 import { toast } from "sonner";
 import { StepChooseAccountType } from "./StepChooseAccountType";
 import { StepPrepareAccount } from "./StepPrepareAccount";
@@ -178,45 +176,58 @@ export function NewAccountDialog({
 
   const handleSubmit = async () => {
     if (!validateStep2()) return;
-    let res: NewAccountResponse | null = null;
+
     try {
       setLoadingStep2(true);
-      const accessToken = await dispatch(fetchAccessToken()).unwrap();
 
       if (!crmAccountId) {
         console.error("crm_account_id is undefined or empty");
         return;
       }
 
-      const payload = {
-        platform_name: "MT5",
-        access_token: accessToken,
-        currency: currency.trim(),
-        password: password.trim(),
-        crm_account_id: crmAccountId,
-        account_type_requested: accountPlan,
-        nickname: accountName.trim(),
-        leverage: leverage.trim(),       
-      };
-
-      if (accountType === "Live") {
-        res = await dispatch(createAdditionalLiveAccount(payload)).unwrap();
-      } else if (accountType === "Demo") {
-        res = await dispatch(createAdditionalDemoAccount(payload)).unwrap();
+      // Map account plan to MT5 group
+      let group = "";
+      if (accountPlan === "Standard") {
+        group = "real\\Bbook\\Standard\\dynamic-2000x-20Pips";
+      } else if (accountPlan === "Pro") {
+        group = "real\\Bbook\\Pro\\dynamic-2000x-10P";
       } else {
-        console.error("Invalid account type");
+        toast.error("Please select a valid account plan");
         return;
       }
 
-      console.log("Registration successful:", res);
-    } catch (err) {
-      console.error("Registration failed:", err);
+      // Generate passwords for MT5 (master and investor)
+      const masterPassword = password.trim();
+      const investorPassword = password.trim() + "inv"; // Simple investor password generation
+
+      const payload = {
+        name: accountName.trim(),
+        group: group,
+        leverage: parseInt(leverage.trim()) || 100,
+        masterPassword: masterPassword,
+        investorPassword: investorPassword,
+        email: "", // Can be added later if needed
+        country: "", // Can be added later if needed
+        city: "", // Can be added later if needed
+        phone: "", // Can be added later if needed
+        comment: `Created from CRM - ${accountPlan} account`
+      };
+
+      const result = await dispatch(createMt5Account(payload)).unwrap();
+
+      if (result.success) {
+        toast.success("Your MT5 account has been created successfully!");
+        await fetchAllData(); // Refresh the accounts list
+        nextStep();
+      } else {
+        toast.error(result.message || "Failed to create MT5 account");
+      }
+
+    } catch (err: any) {
+      console.error("MT5 account creation failed:", err);
+      toast.error(err.message || "Failed to create MT5 account");
     } finally {
-      await fetchAllData();
-      toast.success("Your account has been created successfully!");
       setLoadingStep2(false);
-      setLatestAccount(res);
-      nextStep();
     }
   };
 

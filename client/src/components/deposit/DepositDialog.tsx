@@ -382,6 +382,34 @@ import {
 } from "./types";
 import { DialogDescription } from "@radix-ui/react-dialog";
 import { Button } from "../ui/button";
+import { TpAccountSnapshot } from "@/types/user-details";
+import { MT5Account } from "@/store/slices/mt5AccountSlice";
+
+// Helper function to map MT5Account to TpAccountSnapshot for deposit dialog
+const mapMT5AccountToTpAccount = (mt5Account: MT5Account): TpAccountSnapshot => {
+  return {
+    tradingplatformaccountsid: parseInt(mt5Account.accountId),
+    account_name: parseInt(mt5Account.accountId),
+    platformname: "MT5",
+    acc: parseInt(mt5Account.accountId),
+    account_type: "Live",
+    leverage: mt5Account.leverage,
+    balance: mt5Account.balance.toString(),
+    credit: mt5Account.credit.toString(),
+    equity: mt5Account.equity.toString(),
+    margin: mt5Account.margin.toString(),
+    margin_free: mt5Account.marginFree.toString(),
+    margin_level: mt5Account.marginLevel.toString(),
+    closed_pnl: mt5Account.profit.toString(),
+    open_pnl: "0",
+    account_type_requested: "Standard", // Default value for MT5 accounts
+    provides_balance_history: true,
+    tp_account_scf: {
+      tradingplatformaccountsid: parseInt(mt5Account.accountId),
+      cf_1479: mt5Account.name
+    }
+  };
+};
 
 export function DepositDialog({
   open,
@@ -405,9 +433,9 @@ export function DepositDialog({
   const [exchangeRate, setExchangeRate] = useState<number>(1);
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false); // Add confirmation state
 
-  const accounts = useSelector((state: RootState) => state.accounts.data);
-  const filteredAccounts = accounts.filter(
-    (acc) => acc.account_type !== "Demo"
+  const mt5Accounts = useSelector((state: RootState) => state.mt5.accounts);
+  const filteredAccounts = mt5Accounts.filter(
+    (acc) => acc.isEnabled
   );
 
   const paymentImages: PaymentImages = {
@@ -682,7 +710,7 @@ export function DepositDialog({
               selectedNetwork={selectedNetwork}
               selectedCrypto={selectedCrypto}
               nextStep={nextStep}
-              accounts={filteredAccounts}
+              accounts={filteredAccounts.map(mapMT5AccountToTpAccount)}
               selectedAccount={selectedAccount}
               setSelectedAccount={setSelectedAccount}
               lifetimeDeposit={lifetimeDeposit}

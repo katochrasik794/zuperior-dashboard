@@ -1,28 +1,21 @@
-// zuperior-dashboard/client/src/app/login/_components/auth-form.tsx (New File)
+// zuperior-dashboard/client/src/app/login/_components/auth-form.tsx (Updated for Backend Integration)
 
 "use client";
 import { useState, FormEvent } from "react";
-import { useAppDispatch, useAppSelector } from "@/store/hooks";
-import { loginUser } from "@/store/slices/authSlice";
-import { authService } from "@/services/api.service";
-import { registerUser } from "@/store/slices/registerSlice";
-import { fetchAccessToken } from "@/store/slices/accessCodeSlice";
 import { useRouter } from "next/navigation";
 import { registrationStep1Schema, loginSchema } from "./auth-schemas";
 import { ZodError } from "zod";
 import { AnimatePresence, motion } from "framer-motion";
 import { toast } from "sonner";
 import { useLoading } from "@/context/LoadingContext";
+import { authService } from "@/services/api.service";
 import AuthToggleTabs from "./AuthToggleTabs";
 import RegisterStep1Form from "./RegisterStep1Form";
 import LoginForm from "./LoginForm";
 import SubmitButton from "./SubmitButton";
-import { forgetPassword } from "@/services/forgetPassword";
 
 const AuthForm = () => {
-  const dispatch = useAppDispatch();
   const router = useRouter();
-  const { loading } = useAppSelector((state) => state.auth);
   const { loading: globalLoading, setLoading: setGlobalLoading } = useLoading();
 
   // State
@@ -33,6 +26,7 @@ const AuthForm = () => {
   const [validationErrors, setValidationErrors] = useState<{
     [key: string]: string;
   }>({});
+  const [isLoading, setIsLoading] = useState(false);
 
   const [registerBuffer, setRegisterBuffer] = useState({
     firstName: "",
@@ -59,38 +53,37 @@ const AuthForm = () => {
     }
   };
 
-  // Unified registration and login logic
+  // Handle registration with backend
   const handleRegister = async () => {
     try {
-      setGlobalLoading(true);
-      const freshToken = await dispatch(fetchAccessToken()).unwrap();
-      if (!freshToken) return;
-      const result = await dispatch(
-        registerUser({
-          access_token: freshToken,
-          first_name: registerBuffer.firstName.trim(),
-          last_name: registerBuffer.lastName.trim(),
-          email: registerBuffer.email.trim().toLowerCase(),
-          phone: registerBuffer.phone.trim(),
-          password: registerBuffer.password,
-          country: registerBuffer.country.trim(),
-          country_code: registerBuffer.country_code.trim(),
-          ip: "160.202.38.44",
-          platform_name: "MT5",
-        })
-      ).unwrap();
-      if (result.status_code === "1") {
-        toast.success("Account created! Welcome aboard.");
-        router.push("/");
-      } else {
-        toast.error(result.message || "Registration failed. Please try again.");
+      setIsLoading(true);
+
+      // Prepare registration data for backend
+      const registerData = {
+        name: `${registerBuffer.firstName.trim()} ${registerBuffer.lastName.trim()}`,
+        email: registerBuffer.email.trim().toLowerCase(),
+        password: registerBuffer.password,
+        country: registerBuffer.country.trim(),
+      };
+
+      const response = await authService.register(registerData);
+
+      // Store auth data
+      authService.setAuthData(response.token, response.clientId);
+
+      // Store user data for navbar display
+      if (response.user) {
+        localStorage.setItem('user', JSON.stringify(response.user));
       }
-    } catch (error) {
-      console.log(
-        (error as Error).message || "An error occurred during registration."
-      );
+
+      toast.success("Account created! Welcome aboard.");
+      router.push("/");
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || "Registration failed. Please try again.";
+      toast.error(errorMessage);
+      console.error("Registration error:", error);
     } finally {
-      setGlobalLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -141,63 +134,52 @@ const AuthForm = () => {
   // Handle form submission
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+
     if (forgotMode) {
-      setGlobalLoading(true);
-      const freshToken = await dispatch(fetchAccessToken()).unwrap();
-      if (!freshToken) return;
-      const response = await forgetPassword({
-        email: loginEmail,
-        accessToken: freshToken,
-      });
-      if (response.status_code === "1") {
-        toast.success("Password reset link sent! Check your email.");
-        setForgotMode(false);
-      } else {
-        toast.error(
-          response.error || "Failed to send reset link. Please try again."
-        );
-      }
-      setGlobalLoading(false);
+      // For forgot password, we'll implement a simple email notification
+      toast.info("Password reset feature will be implemented soon.");
+      setForgotMode(false);
       return;
     }
+
     if (isCreateAccount) {
       if (validateStep1()) {
-        // Directly register and login
         await handleRegister();
       }
     } else {
       if (validateLogin()) {
-        const freshToken = await dispatch(fetchAccessToken()).unwrap();
-        if (!freshToken) return;
-        await login(freshToken, loginEmail, loginPassword);
+        await handleLogin();
       }
     }
   };
 
-  const login = async (
-    freshToken: string,
-    email: string,
-    password: string,
-    toastMsg = "Welcome back! You've successfully logged in."
-  ) => {
-    const startTime = Date.now();
-    const result = await dispatch(
-      loginUser({
-        email,
-        password,
-        accessToken: freshToken,
-      })
-    );
-    if (loginUser.fulfilled.match(result)) {
-      toast.success(toastMsg);
-      setGlobalLoading(true);
-      const elapsed = Date.now() - startTime;
-      if (elapsed < 1000) await delay(1000 - elapsed);
+  const handleLogin = async () => {
+    try {
+      setIsLoading(true);
+
+      const loginData = {
+        email: loginEmail.trim(),
+        password: loginPassword,
+      };
+
+      const response = await authService.login(loginData);
+
+      // Store auth data
+      authService.setAuthData(response.token, response.clientId);
+
+      // Store user data for navbar display
+      if (response.user) {
+        localStorage.setItem('user', JSON.stringify(response.user));
+      }
+
+      toast.success("Welcome back! You've successfully logged in.");
       router.push("/");
-    } else {
-      toast.error(
-        "Oops! We couldn't log you in. Double-check your email and password."
-      );
+    } catch (error: any) {
+      const errorMessage = error.response?.data?.message || "Login failed. Please check your credentials.";
+      toast.error(errorMessage);
+      console.error("Login error:", error);
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -271,7 +253,7 @@ const AuthForm = () => {
           )}
           <SubmitButton
             globalLoading={globalLoading}
-            loading={loading}
+            loading={isLoading}
             isCreateAccount={isCreateAccount}
             step={step}
             isForgotPassword={forgotMode}

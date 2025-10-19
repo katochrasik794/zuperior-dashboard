@@ -10,9 +10,9 @@ import copy from "@/assets/copy.svg";
 
 interface StepAccountCreatedProps {
   latestAccount: {
-    object?: {
-      crm_tp_account_id?: number;
-      tp_id?: string;
+    data?: {
+      mt5Login?: number;
+      accountId?: string;
     };
   } | null;
   password: string;
@@ -26,10 +26,10 @@ export const StepAccountCreated: React.FC<StepAccountCreatedProps> = ({
 }) => (
   <div className="w-full">
     <DialogTitle className="text-[20px] md:text-[28px] text-center mt-4 font-semibold dark:text-white/75 text-black">
-      Account created successfuly
+      Account created successfully
     </DialogTitle>
     <DialogTitle className="text-[14px] text-center md:mt-4 font-semibold dark:text-white/75 text-black py-[5.5px]">
-      Copy the credentials and enter into Meta
+      Copy the credentials and enter into MetaTrader 5
     </DialogTitle>
     <div className="md:space-y-6">
       <div className="rounded-[15px] leading-8 bg-white dark:bg-[#050105] px-6 border border-[#251e25] mt-2 md:mt-4 mx-auto w-auto md:w-[396px]">
@@ -45,10 +45,10 @@ export const StepAccountCreated: React.FC<StepAccountCreatedProps> = ({
           </div>
           <div className="flex justify-between items-center">
             <span className="text-[14px] font-semibold text-black dark:text-[#8e8c8f]">
-              MT Login:
+              MT5 Login:
             </span>
             <span className="text-[14px] font-semibold text-black dark:text-white/74 w-[140px]">
-              {latestAccount?.object?.tp_id || "N/A"}
+              {latestAccount?.data?.mt5Login || "N/A"}
             </span>
             <Image className="h-4 w-4 cursor-pointer" src={copy} alt="" />
           </div>
@@ -72,7 +72,7 @@ export const StepAccountCreated: React.FC<StepAccountCreatedProps> = ({
                 <span className="text-[14px] font-semibold text-black dark:text-white">
                   MetaTrader 5
                 </span>
-                <span className="text-[13px] font-semiboldtext-black dark:text-white/75">
+                <span className="text-[13px] font-semibold text-black dark:text-white/75">
                   Download & Install
                 </span>
               </div>
@@ -108,3 +108,4 @@ export const StepAccountCreated: React.FC<StepAccountCreatedProps> = ({
     </div>
   </div>
 );
+

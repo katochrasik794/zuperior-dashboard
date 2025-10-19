@@ -11,9 +11,9 @@ import {
   Copy as CopyIcon,
 } from "lucide-react";
 import { PaymentStatusData, PaymentStatus } from "./types";
-import { fetchAccessToken } from "@/store/slices/accessCodeSlice";
 import { useAppDispatch } from "@/store/hooks";
 import { toast } from "sonner";
+import { mt5Service } from "@/services/api.service";
 
 type StatusConfigType = {
   [key in PaymentStatus]: {
@@ -170,49 +170,24 @@ export function Step4Status({
       setIsProcessing(true);
       setError(null);
 
-      toast.loading("Processing deposit...", {
+      toast.loading("Processing MT5 deposit...", {
         description: "Please wait while we process your transaction.",
       });
 
-      const freshToken = await dispatch(fetchAccessToken()).unwrap();
-      if (!freshToken) {
-        toast.error("Authentication Failed", {
-          description: "Unable to authenticate. Please try again.",
-        });
-        return;
-      }
-
-      const formData = new URLSearchParams();
-      formData.append("account_number", accountNumber);
-      formData.append("amount", receivedAmount);
-      formData.append("access_token", freshToken);
-
-      const response = await fetch("/api/deposit", {
-        method: "POST",
-        headers: { "Content-Type": "application/x-www-form-urlencoded" },
-        body: formData,
+      // Use the new MT5 deposit API
+      const result = await mt5Service.depositToMt5({
+        login: parseInt(accountNumber),
+        balance: parseFloat(receivedAmount),
+        comment: `Deposit via crypto payment - ${statusData.cregis_id}`
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || "Deposit failed");
-      }
-
-      const data = await response.json();
-
-      if (data.status === "success") {
+      if (result.success) {
         setDepositCompleted(true);
-        toast.success("Deposit Completed", {
+        toast.success("MT5 Deposit Completed", {
           description:
-            "Your funds have been successfully deposited to your account.",
+            "Your funds have been successfully deposited to your MT5 account.",
           duration: 4000,
         });
-
-       /*  const userEmail = store.getState().user.data?.email1;
-        if (userEmail)
-          await updateLifetimeDeposit(userEmail, Number(receivedAmount)); */
-
-        // refetchAccountsData();
 
         setTimeout(() => {
           toast.info("Closing", {
@@ -222,13 +197,13 @@ export function Step4Status({
           onClose();
         }, 2000);
       } else {
-        throw new Error(data.message || "Deposit processing failed");
+        throw new Error(result.message || "MT5 deposit processing failed");
       }
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : "Deposit failed";
+        err instanceof Error ? err.message : "MT5 deposit failed";
       setError(errorMessage);
-      toast.error("Deposit Failed", {
+      toast.error("MT5 Deposit Failed", {
         description: errorMessage,
         duration: 6000,
       });
@@ -236,7 +211,7 @@ export function Step4Status({
       setIsProcessing(false);
       toast.dismiss();
     }
-  }, [accountNumber, receivedAmount, dispatch, onClose]);
+  }, [accountNumber, receivedAmount, statusData.cregis_id, onClose]);
 
   useEffect(() => {
     if (

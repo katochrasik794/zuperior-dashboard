@@ -11,16 +11,44 @@ import { Dialog, DialogTrigger } from "../ui/dialog";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import type { RootState } from "../../store";
 import AccountDetails from "./account-details";
+import { TpAccountSnapshot } from "@/types/user-details";
+import { MT5Account } from "@/store/slices/mt5AccountSlice";
 
 interface AccountsSectionProps {
   onOpenNewAccount: () => void;
 }
 
+// Helper function to map MT5Account to TpAccountSnapshot
+const mapMT5AccountToTpAccount = (mt5Account: MT5Account): TpAccountSnapshot => {
+  return {
+    tradingplatformaccountsid: parseInt(mt5Account.accountId),
+    account_name: parseInt(mt5Account.accountId),
+    platformname: "MT5",
+    acc: parseInt(mt5Account.accountId),
+    account_type: "Live", // All MT5 accounts are live for now
+    leverage: mt5Account.leverage,
+    balance: mt5Account.balance.toString(),
+    credit: mt5Account.credit.toString(),
+    equity: mt5Account.equity.toString(),
+    margin: mt5Account.margin.toString(),
+    margin_free: mt5Account.marginFree.toString(),
+    margin_level: mt5Account.marginLevel.toString(),
+    closed_pnl: mt5Account.profit.toString(),
+    open_pnl: "0",
+    account_type_requested: null,
+    provides_balance_history: true,
+    tp_account_scf: {
+      tradingplatformaccountsid: parseInt(mt5Account.accountId),
+      cf_1479: mt5Account.name
+    }
+  };
+};
+
 export function AccountsSection({ onOpenNewAccount }: AccountsSectionProps) {
   const [open, setOpen] = useState(false);
   const { theme } = useTheme();
 
-  const accounts = useSelector((state: RootState) => state.accounts.data);
+  const accounts = useSelector((state: RootState) => state.mt5.accounts);
 
   const hasBasicAccountInfo = accounts && accounts.length > 0;
 
@@ -156,19 +184,19 @@ export function AccountsSection({ onOpenNewAccount }: AccountsSectionProps) {
         <TabsContent value="live">
           {hasBasicAccountInfo ? (
             accounts
-              ?.filter(
-                (account) =>
-                  account.account_type === "Live" && account.acc !== 0
-              )
-              .map((account) => (
-                <AccountDetails
-                  key={account.tradingplatformaccountsid}
-                  accountId={account.acc}
-                  platformName={account.platformname}
-                  accountType={account.account_type}
-                  accountDetails={account}
-                />
-              ))
+              ?.filter((account) => account.isEnabled)
+              .map((account) => {
+                const mappedAccount = mapMT5AccountToTpAccount(account);
+                return (
+                  <AccountDetails
+                    key={mappedAccount.tradingplatformaccountsid}
+                    accountId={mappedAccount.acc}
+                    platformName={mappedAccount.platformname}
+                    accountType={mappedAccount.account_type}
+                    accountDetails={mappedAccount}
+                  />
+                );
+              })
           ) : (
             <div className="text-center py-4 text-gray-500">
               No live accounts available
@@ -179,19 +207,21 @@ export function AccountsSection({ onOpenNewAccount }: AccountsSectionProps) {
         {/* Demo Accounts */}
         <TabsContent value="demo">
           {(() => {
-            const demoAccounts = (accounts || []).filter(
-              (account) => account.account_type === "Demo" && account.acc !== 0
-            );
+            // For now, MT5 doesn't have demo accounts, but we'll show the message
+            const demoAccounts: MT5Account[] = [];
             if (demoAccounts.length > 0) {
-              return demoAccounts.map((account) => (
-                <AccountDetails
-                  key={account.tradingplatformaccountsid}
-                  accountId={account.acc}
-                  platformName={account.platformname}
-                  accountType={account.account_type}
-                  accountDetails={account}
-                />
-              ));
+              return demoAccounts.map((account) => {
+                const mappedAccount = mapMT5AccountToTpAccount(account);
+                return (
+                  <AccountDetails
+                    key={mappedAccount.tradingplatformaccountsid}
+                    accountId={mappedAccount.acc}
+                    platformName={mappedAccount.platformname}
+                    accountType={mappedAccount.account_type}
+                    accountDetails={mappedAccount}
+                  />
+                );
+              });
             }
             return (
               <div className="text-center py-4 text-gray-500">

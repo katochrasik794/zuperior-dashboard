@@ -1,6 +1,6 @@
 // zuperior-dashboard/server/src/services/mt5.service.js (New File)
 
-const axios = require('axios');
+import axios from 'axios';
 
 // MT5 Manager API Base URL from your documentation
 const MT5_BASE_URL = 'http://18.130.5.209:5003/api';
@@ -50,31 +50,31 @@ const mt5Request = async (method, endpoint, data = null) => {
 // --- Exported Functions matching your Roadmap ---
 
 // 4.1 Get Groups API
-exports.getMt5Groups = () => {
-    return mt5Request('GET', 'Groups');
+export const getMt5Groups = () => {
+    return mt5Request('GET', 'groups');
 };
 
 // 4.2 Open MT5 Account API
-exports.openMt5Account = (userData) => {
+export const openMt5Account = (userData) => {
     // Endpoint is '/api/Users' for account creation
     return mt5Request('POST', 'Users', userData);
 };
 
 // 4.3 Deposit (Add Balance)
-exports.depositMt5Balance = (login, amount, comment) => {
+export const depositMt5Balance = (login, amount, comment) => {
     const endpoint = `Users/${login}/AddClientBalance`;
     return mt5Request('POST', endpoint, { balance: amount, comment });
 };
 
 // 4.4 Withdraw (Deduct Balance)
-exports.withdrawMt5Balance = (login, amount, comment) => {
+export const withdrawMt5Balance = (login, amount, comment) => {
     const endpoint = `Users/${login}/DeductClientBalance`;
     // Note: DeductClientBalance usually takes a positive amount to deduct
     return mt5Request('POST', endpoint, { balance: amount, comment });
 };
 
 // 4.5 Get User Profile
-exports.getMt5UserProfile = (login) => {
+export const getMt5UserProfile = (login) => {
     const endpoint = `Users/${login}/getClientProfile`;
     return mt5Request('GET', endpoint);
 };

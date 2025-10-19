@@ -17,13 +17,16 @@ import "swiper/css/pagination";
 
 export default function LoginPage() {
   const router = useRouter();
-  const user = useAppSelector((state) => state.auth.clientId);
 
   useEffect(() => {
-    if (user) {
+    // Check if user is already authenticated
+    const token = localStorage.getItem('userToken');
+    const clientId = localStorage.getItem('clientId');
+
+    if (token && clientId) {
       router.replace("/");
     }
-  }, [user, router]);
+  }, [router]);
   const images = [
     { id: 1, src: loginScreenOne },
     { id: 2, src: loginScreenTwo },

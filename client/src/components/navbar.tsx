@@ -3,12 +3,9 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { useSelector } from "react-redux";
-import { useAppDispatch } from "@/store/hooks";
-import { logout } from "@/store/slices/authSlice";
 import { useTheme } from "next-themes";
 import { Button } from "../components/ui/button";
-import { RootState } from "@/store";
+import { authService } from "@/services/api.service";
 import {
   DropdownMenu,
   DropdownMenuTrigger,
@@ -43,37 +40,35 @@ import { CircleUser, Headset, LogOut, Settings } from "lucide-react";
 
 export function Navbar() {
   const { theme, setTheme } = useTheme();
-  const dispatch = useAppDispatch();
   const router = useRouter();
   const [logoutDialogOpen, setLogoutDialogOpen] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const { setLoading: setGlobalLoading } = useLoading();
 
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark");
   };
 
-  /* const balance = useSelector(
-    (state: RootState) => state.current_account.accountData?.balance
-  );
+  // Get user data from localStorage
+  const getUserData = () => {
+    try {
+      const userStr = localStorage.getItem('user');
+      return userStr ? JSON.parse(userStr) : null;
+    } catch {
+      return null;
+    }
+  };
 
-  const formattedBalance = balance
-    ? Number(Number(balance).toFixed(4)).toString()
-    : "0"; */
-
-  const userDetails = useSelector((state: RootState) => state.user.data);
-  const fullName = userDetails?.accountname ?? "";
+  const userDetails = getUserData();
+  const fullName = userDetails?.name ?? "";
   const firstName = fullName.split(" ")[0] ?? "";
 
   const handleLogoutWithDelay = () => {
     setIsLoggingOut(true);
     setTimeout(() => {
-      dispatch(logout());
-      setGlobalLoading(false);
+      authService.logout();
       setIsLoggingOut(false);
       setLogoutDialogOpen(false);
-      router.replace("/");
-    }, 3000);
+    }, 1000);
   };
 
   return (
@@ -147,10 +142,10 @@ export function Navbar() {
                 />
                 <div className="flex flex-col gap-1">
                   <p className="text-sm text-black dark:text-white/75 font-bold">
-                    {userDetails?.accountname}
+                    {userDetails?.name || firstName}
                   </p>
                   <p className="text-xs text-black dark:text-white/50 font-medium">
-                    {userDetails?.email1}
+                    {userDetails?.email}
                   </p>
                 </div>
               </div>

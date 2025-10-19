@@ -9,13 +9,23 @@ import { BalanceSection } from "./balance-section";
 import { AccountsSection } from "./accounts-section";
 import { DashboardSkeleton } from "./dashboard-skeleton";
 import { NewAccountDialog } from "./new-account";
-import { store } from "@/store";
 import { useFetchUserData } from "@/hooks/useFetchUserData";
 
 export function DashboardContent() {
-  const name = store.getState().user.data?.accountname;
+  // Get user data from localStorage
+  const getUserData = () => {
+    try {
+      const userStr = localStorage.getItem('user');
+      return userStr ? JSON.parse(userStr) : null;
+    } catch {
+      return null;
+    }
+  };
+
+  const userData = getUserData();
+  const name = userData?.name || "User";
   const [newAccountDialogOpen, setNewAccountDialogOpen] = useState(false);
-  const verificationStatus = store.getState().kyc.verificationStatus;
+  const verificationStatus = "unverified" as const; // Default status since we're not using Redux
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const { fetchAllData, balance: totalBalance, isLoading, hasData } = useFetchUserData();
 

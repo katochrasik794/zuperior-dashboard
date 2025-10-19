@@ -1,31 +1,33 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { AppDispatch, RootState, store } from "@/store";
-import { fetchAccessToken } from "@/store/slices/accessCodeSlice";
-import { getUser } from "@/store/slices/getUserSlice";
+import { AppDispatch, RootState } from "@/store";
+import { fetchUserMt5Accounts } from "@/store/slices/mt5AccountSlice";
 
 export function useFetchUserData() {
   const dispatch = useDispatch<AppDispatch>();
-  const email = useSelector((state: RootState) => state.auth.clientId);
-  const [balance, setBalance] = useState(0);
-  const [isLoading, setIsLoading] = useState(false);
-  const hasData = store.getState().accounts.data?.length !== 0;
+  const { accounts, totalBalance, isLoading, error } = useSelector((state: RootState) => state.mt5);
+  const hasData = accounts.length > 0;
 
   const fetchAllData = useCallback(async () => {
-    if (!email) return;
-
     try {
-      setIsLoading(true);
-      const freshToken = await dispatch(fetchAccessToken()).unwrap();
-      await dispatch(getUser({ email, access_token: freshToken })).unwrap();
-      setBalance(store.getState().accounts.balance);
+      await dispatch(fetchUserMt5Accounts()).unwrap();
     } catch (err) {
       console.error("Data fetch failed", err);
       throw err;
-    } finally {
-      setIsLoading(false);
     }
-  }, [dispatch, email]);
+  }, [dispatch]);
 
-  return { fetchAllData, balance, isLoading, hasData };
+  // Auto-fetch on mount
+  useEffect(() => {
+    fetchAllData();
+  }, [fetchAllData]);
+
+  return {
+    fetchAllData,
+    balance: totalBalance,
+    isLoading,
+    hasData,
+    error,
+    accounts
+  };
 }

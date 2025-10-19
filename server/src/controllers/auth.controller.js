@@ -6,8 +6,8 @@ import jwt from 'jsonwebtoken';
 
 const prisma = new PrismaClient();
 
-// Secret key for JWT (NOTE: Use an environment variable in a real app!)
-const JWT_SECRET = 'YOUR_SUPER_SECRET_KEY';
+// Secret key for JWT
+const JWT_SECRET = process.env.JWT_SECRET || 'fallback-secret-key';
 
 /**
  * Handles the registration (signup) of a new user.
@@ -91,30 +91,14 @@ export const login = async (req, res) => {
         }
 
         // 4. Generate JWT Token
-        const newUser = await prisma.user.create({
-            data: {
-                name,
-                email,
-                password: hashedPassword,
-                country,
-            },
-            // The 'select' clause MUST include 'id' and 'clientId' for the JWT
-            select: { id: true, clientId: true, name: true, email: true },
-        });
-        if (!newUser.id || !newUser.clientId) {
-            console.error('DIAGNOSTIC FAILURE: Missing ID or ClientID after Prisma create.');
-            console.error('newUser object:', newUser);
-            // Throw an error to stop execution and log it
-            throw new Error('Missing required fields for JWT generation.');
-        }
         const token = jwt.sign(
-            { id: newUser.id, clientId: newUser.clientId },
+            { id: user.id, clientId: user.clientId },
             JWT_SECRET,
             { expiresIn: '1d' }
         );
 
         // 5. Send success response
-        res.status(201).json({
+        res.status(200).json({
             token,
             clientId: user.clientId,
             user: { name: user.name, email: user.email }

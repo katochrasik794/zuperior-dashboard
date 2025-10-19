@@ -33,9 +33,18 @@ async function main() {
         await prisma.$connect();
         console.log('Database connected successfully.');
 
-        app.listen(PORT, () => {
+        app.listen(PORT, async () => {
             console.log(`Server is running on port ${PORT}`);
             console.log(`API URL: http://localhost:${PORT}/`);
+
+            // Register MT5 routes after server starts
+            try {
+                const mt5Routes = await import('./routes/mt5.routes.js');
+                app.use('/api', mt5Routes.default);
+                console.log('MT5 routes registered at /api/mt5/*');
+            } catch (error) {
+                console.error('Failed to load MT5 routes:', error.message);
+            }
         });
     } catch (error) {
         console.error('Failed to start server or connect to database:', error);

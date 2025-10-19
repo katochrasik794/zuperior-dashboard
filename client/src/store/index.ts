@@ -12,6 +12,7 @@ import transactionsReducer from "./slices/transactionsSlice";
 import userReducer from "./slices/getUserSlice";
 import accountsReducer from "./slices/accountsSlice";
 import kycReducer from "./slices/kycSlice";
+import mt5Reducer from "./slices/mt5AccountSlice";
 
 // Step 1: Combine reducers
 const appReducer = combineReducers({
@@ -20,6 +21,7 @@ const appReducer = combineReducers({
   accounts: accountsReducer,
   transactions: transactionsReducer,
   kyc: kycReducer,
+  mt5: mt5Reducer,
 });
 
 // Step 2: Custom root reducer with logout reset
@@ -41,6 +43,7 @@ const rootReducer: Reducer<ReturnType<typeof appReducer>, AnyAction> = (
         accounts: accountsReducer(undefined, action),
         transactions: transactionsReducer(undefined, action),
         kyc: kycReducer(undefined, action),
+        mt5: mt5Reducer(undefined, action),
       },
       action
     );
@@ -53,7 +56,7 @@ const rootReducer: Reducer<ReturnType<typeof appReducer>, AnyAction> = (
 const persistConfig = {
   key: "root",
   storage,
-  whitelist: ["auth", "user", "accounts", "transactions", "kyc"],
+  whitelist: ["auth", "user", "accounts", "transactions", "kyc", "mt5"],
 };
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

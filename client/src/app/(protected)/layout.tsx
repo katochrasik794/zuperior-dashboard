@@ -20,17 +20,20 @@ export default function ProtectedLayout({
   children: React.ReactNode;
 }) {
   const router = useRouter();
-  const token = useAppSelector((state) => state.auth.token);
 
   const [authChecked, setAuthChecked] = useState(false);
 
   useEffect(() => {
-    if (!token) {
+    // Check authentication using localStorage
+    const token = localStorage.getItem('userToken');
+    const clientId = localStorage.getItem('clientId');
+
+    if (!token || !clientId) {
       router.push("/login");
     } else {
       setAuthChecked(true); // Mark auth as confirmed
     }
-  }, [token, router]);
+  }, [router]);
 
   // Initialize Crisp chat after component mounts
   useEffect(() => {
