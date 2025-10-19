@@ -2,7 +2,7 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "https://client.api.skaleapps.io/api/v-2",
+  baseURL: "http://18.130.5.209:5003",
   headers: {
     "Content-Type": "application/x-www-form-urlencoded",
   },

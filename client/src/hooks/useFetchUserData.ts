@@ -1,7 +1,7 @@
 import { useCallback, useEffect } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { AppDispatch, RootState } from "@/store";
-import fetchUserMt5Accounts from "@/store/slices/mt5AccountSlice";
+import { fetchUserMt5Accounts } from "@/store/slices/mt5AccountSlice";
 import { authService } from "@/services/api.service";
 
 export function useFetchUserData() {

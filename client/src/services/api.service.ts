@@ -124,6 +124,12 @@ const mt5Service = {
   getMt5UserProfile: async (login: number) => {
     const response = await api.get(`/Users/${login}/getClientProfile`);
     return response.data;
+  },
+
+  // Get all MT5 accounts for current user
+  getUserMt5Accounts: async () => {
+    const response = await api.get('/mt5/user-accounts');
+    return response.data;
   }
 };
 

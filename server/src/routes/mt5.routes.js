@@ -12,15 +12,15 @@ router.get('/mt5/groups', mt5Controller.getGroups);
 // We'll use the protect middleware for routes that interact with a specific user's account
 
 // 2.2 Open MT5 Account API
-router.post('/api/Users', protect, mt5Controller.createAccount);
+router.post('/Users', protect, mt5Controller.createAccount);
 
 // 2.3 Deposit API
-router.post('/api/Users/:login/AddClientBalance', protect, mt5Controller.deposit);
+router.post('/Users/:login/AddClientBalance', protect, mt5Controller.deposit);
 
 // 2.4 Withdraw API
-router.post('/api/Users/:login/DeductClientBalance', protect, mt5Controller.withdraw);
+router.post('/Users/:login/DeductClientBalance', protect, mt5Controller.withdraw);
 
 // 2.5 Get User Profile API
-router.get('/api/Users/:login/getClientProfile', protect, mt5Controller.getUserProfile);
+router.get('/Users/:login/getClientProfile', protect, mt5Controller.getUserProfile);
 
 export default router;

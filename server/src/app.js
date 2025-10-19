@@ -13,7 +13,12 @@ const mt5Routes = require('./routes/mt5.routes');
 // ... import other routes (txRoutes, kycRoutes)
 
 // Middleware
-app.use(cors()); // You must configure CORS to allow requests from your Next.js app's URL
+app.use(cors({
+  origin: "*", // Allow all origins
+  credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"]
+})); // CORS configured to allow all origins
 app.use(express.json());
 
 // Routes

@@ -48,17 +48,36 @@ export interface MT5State {
 
 // ✅ Get Groups
 export const fetchMt5Groups = createAsyncThunk(
-  "mt5/fetchGroups",
-  async (_, { rejectWithValue }) => {
-    try {
-      const response = await mt5Service.get("/api/Groups");
-      return response.data;
-    } catch (error: any) {
-      return rejectWithValue(
-        error.response?.data?.message || "Failed to fetch MT5 groups"
-      );
-    }
-  }
+   "mt5/fetchGroups",
+   async (_, { rejectWithValue }) => {
+     try {
+       const response = await mt5Service.getMt5Groups();
+       return response.data;
+     } catch (error: any) {
+       return rejectWithValue(
+         error.response?.data?.message || "Failed to fetch MT5 groups"
+       );
+     }
+   }
+);
+
+// ✅ Get User MT5 Accounts
+export const fetchUserMt5Accounts = createAsyncThunk(
+   "mt5/fetchUserAccounts",
+   async (_, { rejectWithValue }) => {
+     try {
+       const response = await mt5Service.getUserMt5Accounts();
+       return response.data.accounts || [];
+     } catch (error: any) {
+       if (error.response?.status === 401) {
+         console.log("User not authenticated, returning empty accounts");
+         return [];
+       }
+       return rejectWithValue(
+         error.response?.data?.message || "Failed to fetch MT5 accounts"
+       );
+     }
+   }
 );
 
 // ✅ Create MT5 Account
@@ -80,7 +99,7 @@ export const createMt5Account = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const response = await mt5Service.post("/api/Users", data);
+      const response = await mt5Service.createMt5Account(data);
       return response.data;
     } catch (error: any) {
       if (error.response?.status === 401)
@@ -100,13 +119,7 @@ export const depositToMt5Account = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const response = await mt5Service.post(
-        `/api/Users/${data.login}/AddClientBalance`,
-        {
-          balance: data.balance,
-          comment: data.comment,
-        }
-      );
+      const response = await mt5Service.depositToMt5(data);
       return response.data;
     } catch (error: any) {
       if (error.response?.status === 401)
@@ -126,13 +139,7 @@ export const withdrawFromMt5Account = createAsyncThunk(
     { rejectWithValue }
   ) => {
     try {
-      const response = await mt5Service.post(
-        `/api/Users/${data.login}/DeductClientBalance`,
-        {
-          balance: data.balance,
-          comment: data.comment,
-        }
-      );
+      const response = await mt5Service.withdrawFromMt5(data);
       return response.data;
     } catch (error: any) {
       if (error.response?.status === 401)
@@ -149,9 +156,7 @@ export const refreshMt5AccountProfile = createAsyncThunk(
   "mt5/refreshProfile",
   async (login: number, { rejectWithValue }) => {
     try {
-      const response = await mt5Service.get(
-        `/api/Users/${login}/getClientProfile`
-      );
+      const response = await mt5Service.getMt5UserProfile(login);
       return response.data;
     } catch (error: any) {
       if (error.response?.status === 401)

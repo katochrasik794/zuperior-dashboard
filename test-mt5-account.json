@@ -1,0 +1,12 @@
+{
+  "name": "TestAccount",
+  "group": "real\\Bbook\\Standard\\dynamic-2000x-20Pips",
+  "leverage": 100,
+  "masterPassword": "TestPass123",
+  "investorPassword": "TestPass123",
+  "email": "test@example.com",
+  "country": "US",
+  "city": "New York",
+  "phone": "+1234567890",
+  "comment": "Test account creation"
+}
