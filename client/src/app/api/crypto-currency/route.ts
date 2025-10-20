@@ -63,7 +63,7 @@ export async function GET() {
         },
         {
           symbol: "USDT",
-          name: "USDT Manual",
+          name: "USDT TRC20 QRl",
           exchangeRate: 1.0,
           network: "Manual@Twinxa7902309skjhfsdlhflksjdhlkLL",
           blockchain: "Manual",
@@ -161,7 +161,7 @@ export async function GET() {
       },
       {
         symbol: "USDT",
-        name: "USDT Manual",
+        name: "USDT TRC20 QR",
         exchangeRate: 1.0,
         network: "Manual@Twinxa7902309skjhfsdlhflksjdhlkLL",
         blockchain: "Manual",

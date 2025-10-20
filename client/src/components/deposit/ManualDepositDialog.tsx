@@ -15,7 +15,9 @@ import { store } from "../../store";
 import { fetchUserMt5Accounts } from "../../store/slices/mt5AccountSlice";
 import { NewAccountDialogProps } from "./types";
 import { USDTManualStep1Form } from "./USDTManualStep1Form";
-import { USDTManualStep3Form } from "./USDTManualStep3Form";
+import { USDTManualStep2Instructions } from "./USDTManualStep2Instructions";
+import { USDTManualStep3Transaction } from "./USDTManualStep3Transaction";
+import { USDTManualStep4Confirmation } from "./USDTManualStep4Confirmation";
 
 export function ManualDepositDialog({
   open,
@@ -105,7 +107,7 @@ export function ManualDepositDialog({
 
       if (result.success) {
         setDepositRequestId(result.data.id);
-        setStep(2);
+        setStep(4);
         console.log('✅ Manual deposit request created:', result.data.id);
       } else {
         setError(result.message || 'Failed to create deposit request');
@@ -129,20 +131,37 @@ export function ManualDepositDialog({
             setAmount={setAmount}
             selectedAccount={selectedAccount}
             setSelectedAccount={setSelectedAccount}
-            transactionId={transactionId}
-            setTransactionId={setTransactionId}
-            proofFile={proofFile}
-            setProofFile={setProofFile}
             accounts={filteredAccounts}
             lifetimeDeposit={lifetimeDeposit}
-            nextStep={handleStep1Continue}
+            nextStep={() => setStep(2)}
           />
         );
       case 2:
         return (
-          <USDTManualStep3Form
+          <USDTManualStep2Instructions
             amount={amount}
             selectedAccount={selectedAccount}
+            nextStep={() => setStep(3)}
+          />
+        );
+      case 3:
+        return (
+          <USDTManualStep3Transaction
+            amount={amount}
+            selectedAccount={selectedAccount}
+            transactionId={transactionId}
+            setTransactionId={setTransactionId}
+            proofFile={proofFile}
+            setProofFile={setProofFile}
+            nextStep={() => setStep(4)}
+          />
+        );
+      case 4:
+        return (
+          <USDTManualStep4Confirmation
+            amount={amount}
+            selectedAccount={selectedAccount}
+            transactionId={transactionId}
             depositRequestId={depositRequestId}
             onClose={() => onOpenChange(false)}
           />
@@ -154,7 +173,7 @@ export function ManualDepositDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[90%] sm:max-w-lg gap-4 bg-background shadow-lg border-2 border-transparent p-6 text-white rounded-[18px] flex flex-col items-center w-full [background:linear-gradient(#fff,#fff)_padding-box,conic-gradient(from_var(--border-angle),#ddd,#f6e6fc,theme(colors.purple.400/48%))_border-box] dark:[background:linear-gradient(#070206,#030103)_padding-box,conic-gradient(from_var(--border-angle),#030103,#030103,theme(colors.purple.400/48%))_border-box] animate-border">
+      <DialogContent className="sm:max-w-[95%] lg:max-w-2xl gap-4 bg-background shadow-lg border-2 border-transparent p-6 text-white rounded-[18px] flex flex-col items-center w-full max-h-[90vh] overflow-y-auto [background:linear-gradient(#fff,#fff)_padding-box,conic-gradient(from_var(--border-angle),#ddd,#f6e6fc,theme(colors.purple.400/48%))_border-box] dark:[background:linear-gradient(#070206,#030103)_padding-box,conic-gradient(from_var(--border-angle),#030103,#030103,theme(colors.purple.400/48%))_border-box] animate-border">
         {/* Step indicator */}
         <div className="flex flex-col space-y-1.5 text-center sm:text-left w-full">
           <div className="flex items-center justify-between w-full">
@@ -172,6 +191,22 @@ export function ManualDepositDialog({
               }`}>
                 <span className="text-sm font-medium">2</span>
               </div>
+              <div className={`h-[4px] w-full mx-0 ${
+                step >= 3 ? "bg-[#6B5993]" : "bg-[#392F4F]"
+              }`}></div>
+              <div className={`flex h-8 w-8 px-4 mx-0 items-center justify-center rounded-full ${
+                step >= 3 ? "bg-[#9F8BCF]" : "bg-[#594B7A]"
+              }`}>
+                <span className="text-sm font-medium">3</span>
+              </div>
+              <div className={`h-[4px] w-full mx-0 ${
+                step >= 4 ? "bg-[#6B5993]" : "bg-[#392F4F]"
+              }`}></div>
+              <div className={`flex h-8 w-8 px-4 mx-0 items-center justify-center rounded-full ${
+                step >= 4 ? "bg-[#9F8BCF]" : "bg-[#594B7A]"
+              }`}>
+                <span className="text-sm font-medium">4</span>
+              </div>
             </div>
           </div>
         </div>
@@ -182,7 +217,7 @@ export function ManualDepositDialog({
 
         <div className="w-full px-6">
           <h2 className="text-2xl text-center font-bold dark:text-white/75 text-black">
-            Pay USDT Manual
+            Pay USDT TRC20 QR
           </h2>
           {renderStepContent()}
         </div>

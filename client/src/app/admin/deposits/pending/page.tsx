@@ -270,7 +270,7 @@ export default function PendingDeposits() {
                         ${deposit.amount.toLocaleString()}
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                        USDT Manual
+                        USDT TRC20 QR
                       </td>
                       <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
                         {new Date(deposit.createdAt).toLocaleString()}

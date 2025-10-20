@@ -149,8 +149,8 @@ export default function DepositPage() {
   const handleCryptoSelect = useCallback((crypto: Cryptocurrency) => {
     setSelectedCrypto(crypto);
     
-    // Check if it's USDT Manual
-    if (crypto.name === "USDT Manual") {
+
+    if (crypto.name === "USDT TRC20 QR") {
       setManualDepositDialogOpen(true);
     } else {
       setDepositDialogOpen(true);

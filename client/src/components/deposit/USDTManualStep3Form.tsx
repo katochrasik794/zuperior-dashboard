@@ -62,7 +62,7 @@ export function USDTManualStep3Form({
   return (
     <div className="w-full overflow-y-auto max-h-[75vh] no-scrollbar">
       <h2 className="text-2xl text-center font-bold dark:text-white/75 text-black -pt-6">
-        Pay {amount} USDT Manual
+        Pay {amount} USDT TRC20 QR
       </h2>
 
       <div className="mt-1 space-y-4">
@@ -117,7 +117,7 @@ export function USDTManualStep3Form({
 
         <div className="rounded-lg p-4">
           <h3 className="text-lg font-semibold dark:text-white/75 text-black mb-3">
-            Pay with USDT Manual
+            Pay with USDT TRC20 QR
           </h3>
           <div className="mb-2 rounded-lg p-1">
             <div className="flex flex-col md:flex-row gap-6">
@@ -138,7 +138,7 @@ export function USDTManualStep3Form({
               <div className="flex-1">
                 <div className="flex items-center mb-3">
                   <span className="font-semibold">
-                    Manual Network
+                    USDT TRC20 QR Network
                   </span>
                 </div>
                 <div className="mb-3">
