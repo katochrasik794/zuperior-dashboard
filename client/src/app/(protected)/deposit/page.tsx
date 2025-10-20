@@ -8,6 +8,7 @@ import { TextAnimate } from "@/components/ui/text-animate";
 import { Tabs } from "@/components/ui/tabs";
 import { DepositDialog } from "@/components/deposit/DepositDialog";
 import { CreditCardDialog } from "@/components/deposit/Epay/CreditCardDialog";
+import { ManualDepositDialog } from "@/components/deposit/ManualDepositDialog";
 import { Landmark } from "lucide-react";
 import { store } from "@/store";
 import { useAppDispatch } from "@/store/hooks";
@@ -59,6 +60,7 @@ export default function DepositPage() {
   );
   const [depositDialogOpen, setDepositDialogOpen] = useState(false);
   const [creditCardDialogOpen, setCreditCardDialogOpen] = useState(false);
+  const [manualDepositDialogOpen, setManualDepositDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"all" | "crypto" | "bank">("all");
   const dispatch = useAppDispatch();
   const [lifetimeDeposit, setLifetimeDeposit] = useState<number>(0);
@@ -115,16 +117,29 @@ export default function DepositPage() {
     const fetchDeposit = async () => {
       try {
         const email = store.getState().user.data?.email1;
+        if (!email) {
+          console.warn("Email not found in store, skipping lifetime deposit fetch");
+          setLifetimeDeposit(0);
+          return;
+        }
+
         const freshToken = await dispatch(fetchAccessToken()).unwrap();
-        if (!email) throw new Error("Email not found in store");
+        if (!freshToken) {
+          console.warn("Access token not available, skipping lifetime deposit fetch");
+          setLifetimeDeposit(0);
+          return;
+        }
 
         const response = await getLifetimeDeposit({
           email,
           accessToken: freshToken,
         });
         setLifetimeDeposit(response);
+        console.log("✅ Lifetime deposit fetched:", response);
       } catch (error) {
         console.error("Error fetching lifetime deposit:", error);
+        // Set default value instead of leaving it undefined
+        setLifetimeDeposit(0);
       }
     };
 
@@ -133,7 +148,13 @@ export default function DepositPage() {
 
   const handleCryptoSelect = useCallback((crypto: Cryptocurrency) => {
     setSelectedCrypto(crypto);
-    setDepositDialogOpen(true);
+    
+    // Check if it's USDT Manual
+    if (crypto.name === "USDT Manual") {
+      setManualDepositDialogOpen(true);
+    } else {
+      setDepositDialogOpen(true);
+    }
   }, []);
 
   // Filter items based on active tab
@@ -265,6 +286,12 @@ export default function DepositPage() {
         <CreditCardDialog
           open={creditCardDialogOpen}
           onOpenChange={setCreditCardDialogOpen}
+          lifetimeDeposit={lifetimeDeposit}
+        />
+        <ManualDepositDialog
+          open={manualDepositDialogOpen}
+          onOpenChange={setManualDepositDialogOpen}
+          selectedCrypto={selectedCrypto}
           lifetimeDeposit={lifetimeDeposit}
         />
       </main>

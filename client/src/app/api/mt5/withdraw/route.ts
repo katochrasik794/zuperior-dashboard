@@ -28,7 +28,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const response = await fetch(`${API_URL}/mt5/withdraw`, {
+    const response = await fetch(`${API_URL}/Users/${login}/DeductClientBalance`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,

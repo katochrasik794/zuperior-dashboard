@@ -195,18 +195,78 @@ const mt5Service = {
     return response.data;
   },
 
-  // Get MT5 user profile
-  getMt5UserProfile: async (login: number) => {
-    const response = await api.get(`/api/proxy/users/${login}`);
+  // Get MT5 account IDs from database for current user
+  getUserMt5AccountsFromDb: async () => {
+    try {
+      console.log('🔍 Calling getUserMt5AccountsFromDb...');
+      const response = await api.get('/api/mt5/user-accounts-db');
+      console.log('📊 getUserMt5AccountsFromDb response:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('❌ getUserMt5AccountsFromDb error:', error);
+      throw error;
+    }
+  },
+
+  // Get MT5 account profile for a specific login
+  getMt5AccountProfile: async (login: string | number) => {
+    const response = await api.get(`/api/mt5/user-profile/${login}`);
     return response.data;
   },
 
-  // Get all MT5 accounts for current user
+  // Get all MT5 accounts for current user (new flow)
   getUserMt5Accounts: async () => {
-    // For .NET Core API, we need to get all users and filter by current user
-    // Since we don't have a direct "get my accounts" endpoint, we'll get all users
-    // and the frontend will filter them based on authentication
-    const response = await api.get('/api/proxy/users');
+    try {
+      // Step 1: Get account IDs from database
+      console.log('📊 Fetching MT5 account IDs from database...');
+      const dbResponse = await mt5Service.getUserMt5AccountsFromDb();
+      
+      console.log('🔍 Database response:', dbResponse);
+      
+      if (!dbResponse.success || !dbResponse.data?.accounts) {
+        console.log('⚠️ No accounts found in database. Response:', dbResponse);
+        return { Success: false, Data: [] };
+      }
+
+      const accountIds = dbResponse.data.accounts;
+      console.log(`✅ Found ${accountIds.length} account(s) in database:`, accountIds.map((a: any) => a.accountId));
+
+      if (accountIds.length === 0) {
+        console.log('⚠️ Account IDs array is empty');
+        return { Success: false, Data: [] };
+      }
+
+      // Step 2: Fetch profile for each account from MT5 API
+      const profilePromises = accountIds.map((account: any) => 
+        mt5Service.getMt5AccountProfile(account.accountId)
+          .catch(error => {
+            console.error(`❌ Failed to fetch profile for account ${account.accountId}:`, error);
+            return null; // Return null for failed fetches
+          })
+      );
+
+      const profiles = await Promise.all(profilePromises);
+      
+      // Filter out failed fetches and extract successful data
+      const validProfiles = profiles
+        .filter(profile => profile && profile.success && profile.data)
+        .map(profile => profile.data);
+
+      console.log(`✅ Successfully fetched ${validProfiles.length} profile(s)`);
+
+      return { 
+        Success: true,
+        Data: validProfiles 
+      };
+    } catch (error: any) {
+      console.error('❌ Error fetching user MT5 accounts:', error);
+      return { Success: false, Data: [], error: error.message };
+    }
+  },
+
+  // Legacy method - Get MT5 user profile (kept for backward compatibility)
+  getMt5UserProfile: async (login: number) => {
+    const response = await api.get(`/api/proxy/users/${login}`);
     return response.data;
   }
 };

@@ -1,109 +1,179 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useDispatch, useSelector } from "react-redux";
 import Link from "next/link";
 import AdminLayout from "@/layouts/admin-layout";
-import {
-  Search,
-  Download,
-  Users,
-  Mail,
-  MailX,
-} from "lucide-react";
-
-interface User {
-  id: string;
-  srNo: number;
-  name: string;
-  email: string;
-  phone: string;
-  country: string;
-  status: "active" | "inactive" | "banned";
-  kycStatus: "verified" | "pending" | "unverified";
-  emailVerified: boolean;
-  referral: string;
-  joinDate: string;
-}
+import { Users, Search, Filter, MoreHorizontal, Mail, MailX, Eye, Edit, Ban, Download, Plus } from "lucide-react";
+import { AppDispatch, RootState } from "@/store";
+import { fetchUsers } from "@/store/slices/adminSlice";
+import { TableSkeleton } from "@/components/admin/TableSkeleton";
+import { StatCardSkeleton } from "@/components/admin/StatCardSkeleton";
+import { Pagination } from "@/components/admin/Pagination";
+import { SearchBar } from "@/components/admin/SearchBar";
+import { FilterDropdown } from "@/components/admin/FilterDropdown";
+import { UserDetailsDialog } from "@/components/admin/UserDetailsDialog";
 
 export default function EmailUnverifiedPage() {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [kycFilter, setKycFilter] = useState("all");
+  const dispatch = useDispatch<AppDispatch>();
+  const { users } = useSelector((state: RootState) => state.admin);
 
-  // Mock data - filtered for email unverified users only
-  const users: User[] = [
-    {
-      id: "1",
-      srNo: 1,
-      name: "rk",
-      email: "katochrasik000@gmail.com",
-      phone: "9090909090",
-      country: "India",
-      status: "active",
-      kycStatus: "unverified",
-      emailVerified: false,
-      referral: "FINCRM9934",
-      joinDate: "05 Oct 2025",
-    },
-    {
-      id: "6",
-      srNo: 2,
-      name: "Finovo Tech",
-      email: "finovotech001@gmail.com",
-      phone: "+91009000000",
-      country: "India",
-      status: "active",
-      kycStatus: "verified",
-      emailVerified: false,
-      referral: "META001",
-      joinDate: "03 Sep 2025",
-    },
-  ];
+  const [currentPage, setCurrentPage] = useState(1);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState("");
+  const [kycFilter, setKycFilter] = useState("");
+  const [pageSize, setPageSize] = useState(25);
+  const [selectedUser, setSelectedUser] = useState<any>(null);
+  const [showUserDetails, setShowUserDetails] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
 
-  const filteredUsers = users.filter((user) => {
-    const matchesSearch = user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesKyc = kycFilter === "all" || user.kycStatus === kycFilter;
+  // Pre-filter for email unverified users only
+  const emailVerifiedFilter = "false";
 
-    return matchesSearch && matchesKyc;
-  });
+  useEffect(() => {
+    dispatch(fetchUsers({
+      page: currentPage,
+      limit: pageSize,
+      search: searchQuery,
+      status: statusFilter,
+      kycStatus: kycFilter,
+      emailVerified: emailVerifiedFilter,
+    }));
+  }, [dispatch, currentPage, pageSize, searchQuery, statusFilter, kycFilter]);
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "active":
-        return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-green-100 text-green-800">Active</span>;
-      case "inactive":
-        return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800">Inactive</span>;
-      case "banned":
-        return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-red-100 text-red-800">Banned</span>;
-      default:
-        return <span className="inline-flex items-center px-2 py-1 rounded-md text-xs font-medium bg-gray-100 text-gray-800">{status}</span>;
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    setCurrentPage(1);
+  };
+
+  const handleStatusFilter = (value: string) => {
+    setStatusFilter(value);
+    setCurrentPage(1);
+  };
+
+  const handleKycFilter = (value: string) => {
+    setKycFilter(value);
+    setCurrentPage(1);
+  };
+
+  const handlePageSizeChange = (newPageSize: number) => {
+    setPageSize(newPageSize);
+    setCurrentPage(1);
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handleViewUser = (user: any) => {
+    setSelectedUser(user);
+    setShowUserDetails(true);
+  };
+
+  const handleBanUser = async (userId: string, action: 'ban' | 'unban') => {
+    try {
+      // TODO: Implement ban/unban functionality
+      console.log(`${action} user:`, userId);
+    } catch (error) {
+      console.error('Error banning user:', error);
     }
   };
 
-  const getVerificationBadge = (emailVerified: boolean, kycStatus: string) => {
+  const handleExportUsers = async () => {
+    setIsExporting(true);
+    try {
+      // TODO: Implement export functionality
+      console.log('Exporting email unverified users...');
+    } catch (error) {
+      console.error('Error exporting users:', error);
+    } finally {
+      setIsExporting(false);
+    }
+  };
+
+  const getStatusBadge = (status: string) => {
+    const statusConfig = {
+      active: { color: "bg-green-100 text-green-800", label: "Active" },
+      banned: { color: "bg-red-100 text-red-800", label: "Banned" },
+      suspended: { color: "bg-yellow-100 text-yellow-800", label: "Suspended" },
+    };
+    const config = statusConfig[status as keyof typeof statusConfig] || statusConfig.active;
     return (
-      <div className="flex flex-col space-y-1">
-        <div className="flex items-center space-x-2">
-          <span className={`text-xs ${emailVerified ? 'text-green-600' : 'text-red-600'}`}>
-            Email: {emailVerified ? 'Verified' : 'Unverified'}
-          </span>
-        </div>
-        <div className="flex items-center space-x-2">
-          <span className={`text-xs ${
-            kycStatus === 'verified' ? 'text-purple-600' :
-            kycStatus === 'pending' ? 'text-yellow-600' : 'text-red-600'
-          }`}>
-            KYC: {kycStatus === 'verified' ? 'Verified' : kycStatus === 'pending' ? 'Pending' : 'Unverified'}
-          </span>
-        </div>
-      </div>
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}>
+        {config.label}
+      </span>
     );
   };
 
-  const stats = [
-    { label: "Email Unverified", value: users.length, icon: MailX, color: "bg-red-500" },
-    { label: "Need Verification", value: users.length, icon: Mail, color: "bg-orange-500" },
+  const getRoleBadge = (role: string) => {
+    const roleConfig = {
+      admin: { color: "bg-purple-100 text-purple-800", label: "Admin" },
+      user: { color: "bg-blue-100 text-blue-800", label: "User" },
+      moderator: { color: "bg-orange-100 text-orange-800", label: "Moderator" },
+    };
+    const config = roleConfig[role as keyof typeof roleConfig] || roleConfig.user;
+    return (
+      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${config.color}`}>
+        {config.label}
+      </span>
+    );
+  };
+
+  const getVerificationBadge = (emailVerified: boolean, kyc: any) => {
+    if (kyc?.verificationStatus === "Approved") {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
+          Verified
+        </span>
+      );
+    } else if (kyc?.verificationStatus === "Pending") {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+          Pending
+        </span>
+      );
+    } else if (emailVerified) {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+          Email Only
+        </span>
+      );
+    } else {
+      return (
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+          Unverified
+        </span>
+      );
+    }
+  };
+
+  const statusOptions = [
+    { value: "", label: "All Status" },
+    { value: "active", label: "Active" },
+    { value: "banned", label: "Banned" },
+    { value: "suspended", label: "Suspended" },
   ];
+
+  const kycOptions = [
+    { value: "", label: "All KYC" },
+    { value: "Approved", label: "Verified" },
+    { value: "Pending", label: "Pending" },
+    { value: "Rejected", label: "Rejected" },
+    { value: "none", label: "Not Started" },
+  ];
+
+  const pageSizeOptions = [
+    { value: "25", label: "25" },
+    { value: "50", label: "50" },
+    { value: "100", label: "100" },
+  ];
+
+  const stats = users.list ? [
+    { label: "Email Unverified", value: users.list.length, icon: MailX, color: "bg-red-500" },
+    { label: "Need Verification", value: users.list.length, icon: Mail, color: "bg-orange-500" },
+    { label: "KYC Verified", value: users.list.filter(u => u.kyc?.verificationStatus === "Approved").length, icon: Users, color: "bg-green-500" },
+    { label: "Active Users", value: users.list.filter(u => u.status === "active").length, icon: Users, color: "bg-purple-500" },
+  ] : [];
 
   return (
     <AdminLayout>
@@ -115,66 +185,79 @@ export default function EmailUnverifiedPage() {
               <Users className="h-6 w-6 mr-3" />
               Email Unverified Users
             </h1>
-            <p className="text-sm text-gray-600 mt-1">Users who haven&apos;t verified their email addresses.</p>
+            <p className="text-sm text-gray-600 mt-1">Users who haven't verified their email addresses.</p>
           </div>
           <div className="mt-4 sm:mt-0 flex space-x-3">
-            <button className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors">
+            <button 
+              onClick={handleExportUsers}
+              disabled={isExporting}
+              className="inline-flex items-center px-4 py-2 border border-gray-300 rounded-lg shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 transition-colors disabled:opacity-50"
+            >
               <Download className="h-4 w-4 mr-2" />
-              Export
+              {isExporting ? 'Exporting...' : 'Export'}
             </button>
+            <Link href="/admin/users/add">
+              <button className="inline-flex items-center px-4 py-2 border border-transparent rounded-lg shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 transition-colors">
+                <Plus className="h-4 w-4 mr-2" />
+                Add User
+              </button>
+            </Link>
           </div>
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-          {stats.map((stat) => (
-            <div key={stat.label} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
-              <div className="flex items-center">
-                <div className={`p-3 rounded-xl ${stat.color}`}>
-                  <stat.icon className="h-6 w-6 text-white" />
-                </div>
-                <div className="ml-4">
-                  <p className="text-sm font-medium text-gray-500">{stat.label}</p>
-                  <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {users.loading ? (
+            <StatCardSkeleton count={4} />
+          ) : (
+            stats.map((stat) => (
+              <div key={stat.label} className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 hover:shadow-md transition-shadow">
+                <div className="flex items-center">
+                  <div className={`p-3 rounded-xl ${stat.color}`}>
+                    <stat.icon className="h-6 w-6 text-white" />
+                  </div>
+                  <div className="ml-4">
+                    <p className="text-sm font-medium text-gray-500">{stat.label}</p>
+                    <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
 
         {/* Filters */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
           <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
             <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-4">
-              <div className="relative flex-1 sm:w-80">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <input
-                  type="text"
-                  placeholder="Search (email / name)"
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
+              <div className="flex-1 sm:w-80">
+                <SearchBar
+                  placeholder="Search email unverified users..."
+                  onSearch={handleSearch}
                 />
               </div>
               <div className="flex flex-wrap gap-2">
-                <select
-                  className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors"
+                <FilterDropdown
+                  options={statusOptions}
+                  value={statusFilter}
+                  onValueChange={handleStatusFilter}
+                  placeholder="All Status"
+                  className="w-32"
+                />
+                <FilterDropdown
+                  options={kycOptions}
                   value={kycFilter}
-                  onChange={(e) => setKycFilter(e.target.value)}
-                >
-                  <option value="all">All</option>
-                  <option value="verified">Verified</option>
-                  <option value="pending">Pending</option>
-                  <option value="unverified">Unverified</option>
-                </select>
-                <select className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-purple-500 transition-colors">
-                  <option value="25">25</option>
-                  <option value="50">50</option>
-                  <option value="100">100</option>
-                </select>
-                <button className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium">
-                  Apply
-                </button>
+                  onValueChange={handleKycFilter}
+                  placeholder="All KYC"
+                  className="w-32"
+                />
+                <FilterDropdown
+                  options={pageSizeOptions}
+                  value={pageSize.toString()}
+                  onValueChange={(value) => handlePageSizeChange(parseInt(value))}
+                  placeholder="Page Size"
+                  className="w-20"
+                />
               </div>
             </div>
           </div>
@@ -183,131 +266,114 @@ export default function EmailUnverifiedPage() {
         {/* Users Table */}
         <div className="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Sr No.
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Name
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Email
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Verification
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Country
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Phone
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Referral
-                  </th>
-                  <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Joined
-                  </th>
-                  <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Action
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {filteredUsers.map((user) => (
-                  <tr key={user.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {user.srNo}
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      <div className="text-sm font-medium text-gray-900">{user.name}</div>
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {user.email}
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      {getVerificationBadge(user.emailVerified, user.kycStatus)}
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {user.country}
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {user.phone}
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap">
-                      {getStatusBadge(user.status)}
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {user.referral}
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {user.joinDate}
-                    </td>
-                    <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex items-center justify-end space-x-2">
-                        <Link href={`/admin/users/edit?id=${user.id}`}>
-                          <button className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded text-xs font-medium transition-colors">
-                            View/Edit
-                          </button>
-                        </Link>
-                        <button className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded text-xs font-medium transition-colors">
-                          Login as User
-                        </button>
-                        <button className="bg-red-500 hover:bg-red-600 text-white px-3 py-1 rounded text-xs font-medium transition-colors">
-                          Delete (OTP)
-                        </button>
-                        <button className="bg-red-600 hover:bg-red-700 text-white px-3 py-1 rounded text-xs font-medium transition-colors">
-                          Confirm Delete
-                        </button>
-                      </div>
-                    </td>
+            {users.loading ? (
+              <TableSkeleton rows={10} columns={9} />
+            ) : (
+              <table className="min-w-full divide-y divide-gray-200">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      #
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Name
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Email
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Role
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Verification
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Country
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Phone
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Status
+                    </th>
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Actions
+                    </th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="bg-white divide-y divide-gray-200">
+                  {users.list.map((user, index) => (
+                    <tr key={user.id} className="hover:bg-gray-50">
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {(currentPage - 1) * pageSize + index + 1}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        <div className="text-sm font-medium text-gray-900">{user.name || 'N/A'}</div>
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {user.email}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        {getRoleBadge(user.role)}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        {getVerificationBadge(user.emailVerified, user.kyc)}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {user.country || 'N/A'}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-900">
+                        {user.phone || 'N/A'}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap">
+                        {getStatusBadge(user.status)}
+                      </td>
+                      <td className="px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex items-center justify-end space-x-2">
+                          <button 
+                            onClick={() => handleViewUser(user)}
+                            className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-1 rounded text-xs font-medium transition-colors"
+                          >
+                            <Eye className="h-3 w-3" />
+                          </button>
+                          <Link href={`/admin/users/edit?id=${user.id}`}>
+                            <button className="bg-purple-500 hover:bg-purple-600 text-white px-3 py-1 rounded text-xs font-medium transition-colors">
+                              <Edit className="h-3 w-3" />
+                            </button>
+                          </Link>
+                          <button 
+                            onClick={() => handleBanUser(user.id, user.status === 'banned' ? 'unban' : 'ban')}
+                            className={`${user.status === 'banned' ? 'bg-green-500 hover:bg-green-600' : 'bg-red-500 hover:bg-red-600'} text-white px-3 py-1 rounded text-xs font-medium transition-colors`}
+                          >
+                            <Ban className="h-3 w-3" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
           </div>
 
           {/* Pagination */}
-          <div className="bg-white px-4 py-3 flex items-center justify-between border-t border-gray-200 sm:px-6">
-            <div className="flex-1 flex justify-between sm:hidden">
-              <button className="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors">
-                Previous
-              </button>
-              <button className="ml-3 relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-lg text-gray-700 bg-white hover:bg-gray-50 transition-colors">
-                Next
-              </button>
-            </div>
-            <div className="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
-              <div>
-                <p className="text-sm text-gray-700">
-                  Showing <span className="font-medium">1-{filteredUsers.length}</span> of <span className="font-medium">{users.length}</span>
-                </p>
-              </div>
-              <div>
-                <nav className="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                  <button className="relative inline-flex items-center px-2 py-2 rounded-l-lg border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                    </svg>
-                  </button>
-                  <button className="relative inline-flex items-center px-4 py-2 border border-gray-300 bg-purple-600 text-sm font-medium text-white">
-                    1
-                  </button>
-                  <button className="relative inline-flex items-center px-2 py-2 rounded-r-lg border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50 transition-colors">
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-                    </svg>
-                  </button>
-                </nav>
-              </div>
-            </div>
-          </div>
+          {!users.loading && users.total > 0 && (
+            <Pagination
+              currentPage={currentPage}
+              totalPages={Math.ceil(users.total / pageSize)}
+              onPageChange={handlePageChange}
+              totalItems={users.total}
+              itemsPerPage={pageSize}
+            />
+          )}
         </div>
+
+        {/* User Details Dialog */}
+        <UserDetailsDialog
+          isOpen={showUserDetails}
+          onClose={() => setShowUserDetails(false)}
+          user={selectedUser}
+        />
       </div>
     </AdminLayout>
   );

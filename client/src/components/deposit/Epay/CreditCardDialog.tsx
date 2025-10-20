@@ -7,8 +7,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useSelector } from "react-redux";
-import type { RootState } from "../../../store";
+import { useSelector, useDispatch } from "react-redux";
+import type { RootState, AppDispatch } from "../../../store";
+import { fetchUserMt5Accounts } from "../../../store/slices/mt5AccountSlice";
 import { NewAccountDialogProps } from "../types";
 import { CreditStep1Form } from "./CreditStep1Form";
 import { CreditStep2Form } from "./CreditStep2Form";
@@ -33,9 +34,10 @@ export function CreditCardDialog({
     "success" | "failed" | "pending"
   >("pending");
 
-  const accounts = useSelector((state: RootState) => state.accounts.data);
-  const filteredAccounts = accounts.filter(
-    (account) => account.account_type !== "Demo" && account.acc !== 0
+  const dispatch = useDispatch<AppDispatch>();
+  const mt5Accounts = useSelector((state: RootState) => state.mt5.accounts);
+  const filteredAccounts = mt5Accounts.filter(
+    (account) => account.isEnabled
   );
 
   const resetAllStates = useCallback(() => {
@@ -66,6 +68,14 @@ export function CreditCardDialog({
       window.history.replaceState({}, "", cleanUrl);
     }
   }, [open, resetAllStates]);
+
+  // Fetch MT5 accounts when dialog opens
+  useEffect(() => {
+    if (open && mt5Accounts.length === 0) {
+      console.log('🔄 CreditCardDialog: Fetching MT5 accounts...');
+      dispatch(fetchUserMt5Accounts());
+    }
+  }, [open, dispatch, mt5Accounts.length]);
 
   const handlePaymentContinue = async () => {
     if (!amount) {

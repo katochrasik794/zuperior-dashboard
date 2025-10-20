@@ -367,13 +367,9 @@ import { Step1Form } from "@/components/deposit/Step1Form";
 import { Step2Confirmation } from "@/components/deposit/Step2Confirmation";
 import { Step3Payment } from "@/components/deposit/Step3Payment";
 import { Step4Status } from "@/components/deposit/Step4Status";
-import { useSelector } from "react-redux";
-import type { RootState } from "../../store";
-import btc from "@/assets/bitcoin.png";
-import usdt from "@/assets/tether.png";
-import usdc from "@/assets/binance.png";
-import ethereum from "@/assets/binance.png";
-import solana from "@/assets/binance.png";
+import { useSelector, useDispatch } from "react-redux";
+import type { RootState, AppDispatch } from "../../store";
+import { fetchUserMt5Accounts } from "../../store/slices/mt5AccountSlice";
 import {
   CheckoutData,
   NewAccountDialogProps,
@@ -433,20 +429,35 @@ export function DepositDialog({
   const [exchangeRate, setExchangeRate] = useState<number>(1);
   const [confirmCloseOpen, setConfirmCloseOpen] = useState(false); // Add confirmation state
 
+  const dispatch = useDispatch<AppDispatch>();
   const mt5Accounts = useSelector((state: RootState) => state.mt5.accounts);
   const filteredAccounts = mt5Accounts.filter(
     (acc) => acc.isEnabled
   );
 
-  const paymentImages: PaymentImages = {
-    USDT: usdt,
-    BTC: btc,
-    USDC: usdc,
-    ETH: ethereum,
-    SOL: solana,
+  // Dynamic payment images based on selected crypto
+  const getPaymentImages = (): PaymentImages => {
+    const images: PaymentImages = {};
+    
+    if (selectedCrypto) {
+      // Use the icon from the selected crypto
+      images[selectedCrypto.symbol] = selectedCrypto.icon;
+    }
+    
+    return images;
   };
 
+  const paymentImages = getPaymentImages();
+
   const pollingIntervalRef = useRef<NodeJS.Timeout | null>(null);
+
+  // Fetch MT5 accounts when dialog opens
+  useEffect(() => {
+    if (open && mt5Accounts.length === 0) {
+      console.log('🔄 DepositDialog: Fetching MT5 accounts...');
+      dispatch(fetchUserMt5Accounts());
+    }
+  }, [open, dispatch, mt5Accounts.length]);
 
   const checkPaymentStatus = useCallback(
     async (cregisId: string) => {

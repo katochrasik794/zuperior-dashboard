@@ -14,9 +14,9 @@ interface PersonalInfoStepProps {
   lastName: string;
   phoneNumber: string;
   address: string;
-  setFirstName?: (value: string) => void;
-  setLastName?: (value: string) => void;
-  setPhoneNumber?: (value: string) => void;
+  setFirstName: (value: string) => void;
+  setLastName: (value: string) => void;
+  setPhoneNumber: (value: string) => void;
   setAddress: (value: string) => void;
   onNext: () => void;
 }
@@ -26,9 +26,9 @@ export default function PersonalInfoStep({
   lastName,
   address,
   phoneNumber,
-  //setFirstName,
-  //setLastName,
-  //setPhoneNumber,
+  setFirstName,
+  setLastName,
+  setPhoneNumber,
   setAddress,
   onNext,
 }: PersonalInfoStepProps) {
@@ -65,24 +65,21 @@ export default function PersonalInfoStep({
               id="firstName"
               placeholder="First name"
               value={firstName}
-              disabled
-              // onChange={(e) => setFirstName(e.target.value)}
+              onChange={(e) => setFirstName(e.target.value)}
               className="border-[#2a3247] bg-[#FFFFFF] dark:bg-[#01040D] dark:text-[#FFFFFF] text-[#000000] focus-visible:ring-blue-500"
             />
             <Input
               id="lastName"
               placeholder="Last name"
               value={lastName}
-              disabled
-              // onChange={(e) => setLastName(e.target.value)}
+              onChange={(e) => setLastName(e.target.value)}
               className="border-[#2a3247] bg-[#FFFFFF] dark:bg-[#01040D] dark:text-[#FFFFFF] text-[#000000] focus-visible:ring-blue-500"
             />
             <Input
               id="phoneNumber"
               placeholder="Phone Number"
               value={phoneNumber}
-              disabled
-              // onChange={(e) => setPhoneNumber(e.target.value)}
+              onChange={(e) => setPhoneNumber(e.target.value)}
               className="border-[#2a3247] bg-[#FFFFFF] dark:bg-[#01040D] dark:text-[#FFFFFF] text-[#000000] focus-visible:ring-blue-500"
             />
 

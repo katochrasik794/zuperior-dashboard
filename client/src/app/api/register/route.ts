@@ -20,7 +20,7 @@ export async function POST(request: NextRequest) {
     const name = `${first_name.trim()} ${last_name.trim()}`;
 
     // Call local server registration
-    const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:5000';
+    const baseUrl = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:5000/api';
     const response = await axios.post(
       `${baseUrl}/register`,
       {

@@ -14,7 +14,7 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const response = await fetch(`${API_URL}/users`, {
+    const response = await fetch(`${API_URL}/Users`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,

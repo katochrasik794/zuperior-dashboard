@@ -5,7 +5,7 @@ const API_URL = process.env.NEXT_PUBLIC_BACKEND_API_URL || 'http://localhost:500
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { login: string } }
+  { params }: { params: Promise<{ login: string }> }
 ) {
   try {
     const token = request.headers.get('authorization')?.replace('Bearer ', '');
@@ -17,7 +17,7 @@ export async function GET(
       );
     }
 
-    const { login } = params;
+    const { login } = await params;
 
     if (!login) {
       return NextResponse.json(
@@ -26,7 +26,7 @@ export async function GET(
       );
     }
 
-    const response = await fetch(`${API_URL}/mt5/user-profile/${login}`, {
+    const response = await fetch(`${API_URL}/Users/${login}/getClientProfile`, {
       method: 'GET',
       headers: {
         'Authorization': `Bearer ${token}`,

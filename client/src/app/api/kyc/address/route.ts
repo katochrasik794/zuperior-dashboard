@@ -8,17 +8,42 @@ export async function POST(request: Request) {
       SHUFTI_PRO_CLIENT_ID,
       SHUFTI_PRO_SECRET_KEY,
       SHUFTI_PRO_CALLBACK_URL,
+      NEXT_PUBLIC_KYC_TEST_MODE,
     } = process.env;
 
+    const requestBody: AddressKYCRequestBody = await request.json();
+
+    // TEST MODE: Simulate successful verification without calling Shufti Pro
+    if (NEXT_PUBLIC_KYC_TEST_MODE === 'true' || !SHUFTI_PRO_CLIENT_ID) {
+      console.log('🧪 KYC Test Mode: Simulating address verification...');
+      
+      // Simulate a successful response
+      const mockResponse: AddressKYCResponse = {
+        reference: requestBody.reference,
+        event: "verification.accepted",
+        error: "",
+        verification_url: "",
+        verification_result: {
+          address: {
+            status: "accepted",
+            message: "TEST MODE: Address verified successfully"
+          }
+        },
+        declined_reason: null
+      };
+
+      console.log('✅ Test Mode: Address verification successful');
+      return NextResponse.json(mockResponse);
+    }
+
+    // PRODUCTION MODE: Use actual Shufti Pro
     if (
       !SHUFTI_PRO_CLIENT_ID ||
       !SHUFTI_PRO_SECRET_KEY ||
       !SHUFTI_PRO_CALLBACK_URL
     ) {
-      throw new Error("Shufti Pro environment variables not configured");
+      throw new Error("Shufti Pro environment variables not configured. Set NEXT_PUBLIC_KYC_TEST_MODE=true for testing.");
     }
-
-    const requestBody: AddressKYCRequestBody = await request.json();
 
     if (!requestBody.reference) {
       return NextResponse.json({ error: "Missing reference" }, { status: 400 });

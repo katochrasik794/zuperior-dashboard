@@ -73,35 +73,46 @@ export const fetchUserMt5Accounts = createAsyncThunk(
    async (_, { rejectWithValue }) => {
      try {
        const response = await mt5Service.getUserMt5Accounts();
-       // Handle .NET Core API response format
-       if (response.data?.Success === false) {
-         if (response.data?.Message?.includes("Not authorized") || response.status === 401) {
-           console.log("User not authenticated, returning empty accounts");
-           return [];
-         }
-         return rejectWithValue(response.data?.Message || "Failed to fetch MT5 accounts");
+       
+       console.log('🔍 MT5 Service response:', response);
+       
+       // Handle response format - check if Success is false
+       if (response.Success === false) {
+         console.log("⚠️ Failed to fetch MT5 accounts or no accounts found");
+         return [];
        }
 
-       const accounts = response.data?.Data || response.data || [];
-       // Transform .NET Core user format to match expected MT5Account format
+       // Get the accounts data
+       const accounts = response.Data || [];
+       
+       if (accounts.length === 0) {
+         console.log("No MT5 accounts found for user");
+         return [];
+       }
+
+       // Transform MT5 API data to match expected MT5Account format
        const transformedAccounts = accounts.map((account: any) => ({
          accountId: String(account.Login),
          name: account.Name,
          group: account.Group,
          leverage: account.Leverage,
-         balance: account.Balance,
-         equity: account.Equity,
-         credit: account.Credit,
-         margin: account.Margin,
-         marginFree: account.MarginFree,
-         marginLevel: account.MarginLevel,
-         profit: account.Profit,
-         isEnabled: account.IsEnabled,
-         createdAt: account.Registration,
-         updatedAt: account.LastAccess
+         balance: account.Balance || 0,
+         equity: account.Equity || 0,
+         credit: account.Credit || 0,
+         margin: account.Margin || 0,
+         marginFree: account.MarginFree || 0,
+         marginLevel: account.MarginLevel || 0,
+         profit: account.Profit || 0,
+         isEnabled: account.IsEnabled !== false, // Default to true if not specified
+         createdAt: account.Registration || new Date().toISOString(),
+         updatedAt: account.LastAccess || new Date().toISOString()
        }));
+       
+       console.log(`✅ Transformed ${transformedAccounts.length} MT5 accounts`);
        return transformedAccounts;
      } catch (error: any) {
+       console.error("❌ Error in fetchUserMt5Accounts:", error);
+       
        if (error.response?.status === 401) {
          return [];
        }
@@ -359,6 +370,28 @@ const mt5AccountSlice = createSlice({
       .addCase(fetchMt5Groups.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
+      })
+
+      // Fetch User MT5 Accounts
+      .addCase(fetchUserMt5Accounts.pending, (state) => {
+        state.isLoading = true;
+        state.error = null;
+      })
+      .addCase(fetchUserMt5Accounts.fulfilled, (state, action) => {
+        state.isLoading = false;
+        state.accounts = action.payload;
+        // Calculate total balance from all accounts
+        state.totalBalance = state.accounts.reduce(
+          (sum, acc) => sum + (acc.balance || 0),
+          0
+        );
+        console.log(`💰 Total Balance calculated: $${state.totalBalance}`);
+      })
+      .addCase(fetchUserMt5Accounts.rejected, (state, action) => {
+        state.isLoading = false;
+        state.error = action.payload as string;
+        state.accounts = [];
+        state.totalBalance = 0;
       })
 
       // Create Account

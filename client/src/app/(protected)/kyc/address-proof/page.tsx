@@ -12,18 +12,19 @@ import { addressVerification } from "@/services/addressVerification";
 import { AddressKYCResponse } from "@/types/kyc";
 import { setAddressVerified } from "@/store/slices/kycSlice";
 import { useAppDispatch } from "@/store/hooks";
-import { updateKycStatus } from "@/services/kycService";
+import { createKycRecord, updateAddressStatus, updateKycStatus } from "@/services/kycService";
 import { fetchAccessToken } from "@/store/slices/accessCodeSlice";
+import { useEffect } from "react";
 
 export default function AddressVerificationPage() {
   const [step, setStep] = useState(1);
   const user = useSelector((state: RootState) => state.user.data);
   const [file, setFile] = useState<File | null>(null);
   const [isDragging, setIsDragging] = useState(false);
-  const firstName = user?.accountname.split(" ")[0] || "";
-  const lastName = user?.accountname.split(" ")[1] || "";
-  // const [phoneNumber, setPhoneNumber] = useState(""); // to be deleted in future
-  const phoneNumber = user?.phone || "";
+  // Make fields editable by using state
+  const [firstName, setFirstName] = useState(user?.accountname.split(" ")[0] || "");
+  const [lastName, setLastName] = useState(user?.accountname.split(" ")[1] || "");
+  const [phoneNumber, setPhoneNumber] = useState(user?.phone || "");
   const [address, setAddress] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [documentType, setDocumentType] = useState("");
@@ -31,6 +32,22 @@ export default function AddressVerificationPage() {
   const [declinedReason, setDeclinedReason] = useState("");
   const dispatch = useAppDispatch();
   const userEmail = user?.email1;
+
+  // Create KYC record on component mount
+  useEffect(() => {
+    const initKyc = async () => {
+      try {
+        const result = await createKycRecord();
+        if (result.success) {
+          console.log("✅ KYC record ready:", result.message);
+        }
+      } catch (error) {
+        console.log("⚠️ KYC initialization issue:", error);
+        // Don't show error to user - this is not critical
+      }
+    };
+    initKyc();
+  }, []);
 
   const nextStep = () => {
     setStep(step + 1);
@@ -66,13 +83,35 @@ export default function AddressVerificationPage() {
         setVerificationStatus("verified");
         dispatch(setAddressVerified(true));
         toast.success("Address verification completed successfully!");
+        
+        // Update KYC status in new backend
+        try {
+          await updateAddressStatus({
+            addressReference: addressVerificationResult.reference || "",
+            isAddressVerified: true,
+          });
+          console.log("✅ KYC address status updated in database");
+        } catch (error) {
+          console.error("Failed to update KYC address status in database:", error);
+        }
+
+        // Legacy: Update old system
         const freshToken = await dispatch(fetchAccessToken()).unwrap();
         await updateKycStatus(userEmail || "", freshToken, "Verified");
-        // to do: send kyc accepted email
       } else {
         setVerificationStatus("declined");
         toast.warning("Address verification failed, please try again.");
-        // to do: send kyc rejected email
+        
+        // Update declined status in database
+        try {
+          await updateAddressStatus({
+            addressReference: addressVerificationResult.reference || "",
+            isAddressVerified: false,
+          });
+        } catch (error) {
+          console.error("Failed to update declined address status:", error);
+        }
+        
         setDeclinedReason(addressVerificationResult?.declined_reason ?? "");
       }
     } catch (error) {
@@ -95,9 +134,9 @@ export default function AddressVerificationPage() {
             firstName={firstName}
             lastName={lastName}
             phoneNumber={phoneNumber}
-            //setFirstName={setFirstName}
-            //setLastName={setLastName}
-            // setPhoneNumber={setPhoneNumber}
+            setFirstName={setFirstName}
+            setLastName={setLastName}
+            setPhoneNumber={setPhoneNumber}
             setAddress={setAddress}
             onNext={nextStep}
             address={address}

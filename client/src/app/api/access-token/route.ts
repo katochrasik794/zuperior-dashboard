@@ -22,7 +22,6 @@ export async function POST() {
 
     // Return the access token in a consistent format
     return NextResponse.json({
-      success: true,
       access_token: response.data.access_token,
       expires_in: response.data.expires_in,
       token_type: response.data.token_type,

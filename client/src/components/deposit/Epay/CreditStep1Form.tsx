@@ -14,7 +14,7 @@ import { toast } from "sonner";
 import { useEffect, useState } from "react";
 import { store } from "@/store";
 import { CreditStep1Props } from "./types";
-import { TpAccountSnapshot } from "@/types/user-details";
+import { MT5Account } from "@/store/slices/mt5AccountSlice";
 
 export function CreditStep1Form({
   amount,
@@ -26,7 +26,7 @@ export function CreditStep1Form({
   currency,
   lifetimeDeposit
 }: CreditStep1Props & {
-  accounts: TpAccountSnapshot[];
+  accounts: MT5Account[];
   selectedAccount: string;
   setSelectedAccount: (account: string) => void;
   lifetimeDeposit: number;
@@ -56,11 +56,18 @@ export function CreditStep1Form({
   }, [accounts.length]);
 
   const selectedAccountObj = accounts.find(
-    (account) => account.acc.toString() === selectedAccount
+    (account) => account.accountId === selectedAccount
   );
 
   const handleAccountChange = (value: string) => {
     setSelectedAccount(value);
+  };
+
+  // Helper function to extract account type from group name
+  const getAccountTypeFromGroup = (group: string): string => {
+    if (group.includes('Pro')) return 'Pro';
+    if (group.includes('Standard')) return 'Standard';
+    return 'Standard'; // Default fallback
   };
 
   const validateAmount = () => {
@@ -180,17 +187,10 @@ export function CreditStep1Form({
                         MT5
                       </span>
                       <span className="ml-2">
-                        {selectedAccountObj.acc} (
-                        {selectedAccountObj.account_type_requested
-                          ? selectedAccountObj.account_type_requested
-                              .charAt(0)
-                              .toUpperCase() +
-                            selectedAccountObj.account_type_requested.slice(1)
-                          : ""}
-                        )
+                        {selectedAccountObj.accountId} ({getAccountTypeFromGroup(selectedAccountObj.group)})
                       </span>
                       <span className="ml-2 text-xs text-muted-foreground">
-                        ${parseFloat(selectedAccountObj.balance).toFixed(2)}
+                        ${selectedAccountObj.balance.toFixed(2)}
                       </span>
                     </span>
                   ) : (
@@ -201,26 +201,17 @@ export function CreditStep1Form({
               <SelectContent className="border-[#1e171e] bg-white dark:bg-[#060207]">
                 {accounts.map((account, index) => (
                   <SelectItem
-                    key={`${account.acc}-${index}`}
-                    value={`${account.acc}|${
-                      account.account_type_requested || ""
-                    }`}
+                    key={`${account.accountId}-${index}`}
+                    value={account.accountId}
                   >
                     <span className="bg-[#9F8ACF]/30  px-2 py-[2px] rounded-[5px] font-semibold text-black dark:text-white/75 tracking-tighter text-[10px]">
                       MT5
                     </span>
                     <span>
-                      {account.acc} (
-                      {account.account_type_requested
-                        ? account.account_type_requested
-                            .charAt(0)
-                            .toUpperCase() +
-                          account.account_type_requested.slice(1)
-                        : ""}
-                      )
+                      {account.accountId} ({getAccountTypeFromGroup(account.group)})
                     </span>
                     <span className="text-xs text-muted-foreground">
-                      ${parseFloat(account.balance).toFixed(2)}
+                      ${account.balance.toFixed(2)}
                     </span>
                   </SelectItem>
                 ))}

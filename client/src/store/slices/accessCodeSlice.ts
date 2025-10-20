@@ -15,9 +15,11 @@ export const fetchAccessToken = createAsyncThunk<
     });
 
     if (!response.data?.access_token) {
+      console.error("Access token not returned from API:", response.data);
       return rejectWithValue("Access token not returned");
     }
 
+    console.log("✅ Access token fetched successfully");
     return response.data.access_token;
   } catch (error) {
     if (axios.isAxiosError(error)) {

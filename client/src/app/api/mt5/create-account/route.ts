@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const response = await fetch(`${API_URL}/api/mt5/users`, {
+    const response = await fetch(`${API_URL}/Users`, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${token}`,
@@ -82,7 +82,7 @@ export async function POST(request: NextRequest) {
         console.log('💾 Storing accountId:', accountId);
 
         // Call internal API to store in database
-        const storeResponse = await fetch(`${API_URL}/api/mt5/store-account`, {
+        const storeResponse = await fetch(`${API_URL}/mt5/store-account`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${token}`,

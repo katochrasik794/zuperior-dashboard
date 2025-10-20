@@ -14,8 +14,9 @@ import { AMLResponse, DocumentKYCResponse } from "@/types/kyc";
 import { amlVerification } from "@/services/amlVerification";
 import { useAppDispatch } from "@/store/hooks";
 import { setDocumentVerified } from "@/store/slices/kycSlice";
-import { updateKycStatus } from "@/services/kycService";
+import { createKycRecord, updateDocumentStatus, updateKycStatus } from "@/services/kycService";
 import { fetchAccessToken } from "@/store/slices/accessCodeSlice";
+import { useEffect } from "react";
 
 /* interface VerificationResult {
   kycSuccess: boolean;
@@ -38,14 +39,30 @@ export default function VerifyPage() {
   const [isDragging, setIsDragging] = useState(false);
   const userEmail = user?.email1;
 
-  const firstName = user?.accountname.split(" ")[0] || "";
-  const lastName = user?.accountname.split(" ")[1] || "";
-  //const [phoneNumber, setPhoneNumber] = useState(""); // to be deleted in future
-  const phoneNumber = user?.phone || "";
+  // Make fields editable by using state
+  const [firstName, setFirstName] = useState(user?.accountname.split(" ")[0] || "");
+  const [lastName, setLastName] = useState(user?.accountname.split(" ")[1] || "");
+  const [phoneNumber, setPhoneNumber] = useState(user?.phone || "");
   const [isLoading, setIsLoading] = useState(false);
   const [verificationStatus, setVerificationStatus] = useState("");
   const [declinedReason, setDeclinedReason] = useState<string | null>(null);
   const dispatch = useAppDispatch();
+
+  // Create KYC record on component mount
+  useEffect(() => {
+    const initKyc = async () => {
+      try {
+        const result = await createKycRecord();
+        if (result.success) {
+          console.log("✅ KYC record ready:", result.message);
+        }
+      } catch (error) {
+        console.log("⚠️ KYC initialization issue:", error);
+        // Don't show error to user - this is not critical
+      }
+    };
+    initKyc();
+  }, []);
 
   const nextStep = () => {
     setStep(step + 1);
@@ -98,17 +115,42 @@ const handleSubmit = async () => {
 
       // dispatch(setAMLReference(amlVerificationResult.reference || ""));
 
-      // Step 3: Handle AML + Update Supabase
+      // Step 3: Handle AML + Update Database
       if (amlVerificationResult.event === "verification.accepted") {
         dispatch(setDocumentVerified(true));
         setVerificationStatus("verified");
         toast.success("Background screening completed successfully!");
+        
+        // Update KYC status in new backend
+        try {
+          await updateDocumentStatus({
+            documentReference: documentVerificationResult.reference || "",
+            isDocumentVerified: true,
+            amlReference: amlVerificationResult.reference || "",
+          });
+          console.log("✅ KYC document status updated in database");
+        } catch (error) {
+          console.error("Failed to update KYC status in database:", error);
+        }
+
+        // Legacy: Update old system
         const freshToken = await dispatch(fetchAccessToken()).unwrap();
         await updateKycStatus(userEmail || "", freshToken, "Partially Verified");
       } else {
         setVerificationStatus("declined");
         toast.warning("KYC verification successful, but background screening encountered an issue");
-        // to do: send kyc rejected email
+        
+        // Update declined status in database
+        try {
+          await updateDocumentStatus({
+            documentReference: documentVerificationResult.reference || "",
+            isDocumentVerified: false,
+            amlReference: amlVerificationResult.reference || "",
+          });
+        } catch (error) {
+          console.error("Failed to update declined KYC status:", error);
+        }
+        
         setDeclinedReason(amlVerificationResult?.declined_reason?.split(".")[0] || null);
       }
     } catch (error) {
@@ -127,6 +169,9 @@ const handleSubmit = async () => {
             lastName={lastName}
             phoneNumber={phoneNumber}
             country={country}
+            setFirstName={setFirstName}
+            setLastName={setLastName}
+            setPhoneNumber={setPhoneNumber}
             onNext={nextStep}
           />
         );

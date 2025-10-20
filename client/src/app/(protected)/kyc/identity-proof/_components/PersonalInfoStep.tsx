@@ -13,6 +13,9 @@ interface PersonalInfoStepProps {
   lastName: string;
   phoneNumber: string;
   country: string | undefined;
+  setFirstName: (value: string) => void;
+  setLastName: (value: string) => void;
+  setPhoneNumber: (value: string) => void;
   onNext: () => void;
 }
 
@@ -21,6 +24,9 @@ export default function PersonalInfoStep({
   lastName,
   phoneNumber,
   country,
+  setFirstName,
+  setLastName,
+  setPhoneNumber,
   onNext,
 }: PersonalInfoStepProps) {
   const displayCountry = !country || country === "Unknown" ? "India" : country;
@@ -68,8 +74,7 @@ export default function PersonalInfoStep({
                 id="firstName"
                 placeholder="First name"
                 value={firstName}
-                disabled
-                /* onChange={(e) => setFirstName(e.target.value)} */
+                onChange={(e) => setFirstName(e.target.value)}
                 className="border-[#2a3247] bg-white dark:bg-[#01040D] dark:text-white text-black"
               />
             </>
@@ -81,8 +86,7 @@ export default function PersonalInfoStep({
                 id="lastName"
                 placeholder="Last name"
                 value={lastName}
-                disabled
-                /* onChange={(e) => setLastName(e.target.value)} */
+                onChange={(e) => setLastName(e.target.value)}
                 className="border-[#2a3247] bg-white dark:bg-[#01040D] dark:text-white text-black"
               />
             </>
@@ -94,8 +98,7 @@ export default function PersonalInfoStep({
                 id="phoneNumber"
                 placeholder="Phone Number"
                 value={phoneNumber}
-                disabled
-                //onChange={(e) => setPhoneNumber(e.target.value)}
+                onChange={(e) => setPhoneNumber(e.target.value)}
                 className="border-[#2a3247] bg-white dark:bg-[#01040D] dark:text-white text-black"
               />
             </>
